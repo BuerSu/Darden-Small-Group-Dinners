@@ -30,6 +30,7 @@
       }
     }
   </script>
+  <script src="shared-data.js"></script>
 </head>
 <body class="h-full text-slate-800 antialiased flex flex-col font-sans">
 
@@ -47,6 +48,10 @@
       </div>
       
       <div class="flex items-center space-x-3">
+        <span id="currentUserLabel" class="hidden sm:inline text-xs text-slate-300"></span>
+        <button onclick="handleLogOut()" class="text-xs text-slate-300 hover:text-white underline px-2 py-1 transition">
+          Log Out
+        </button>
         <span class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-500/20 text-orange-200 border border-orange-500/30">
           <span class="w-1.5 h-1.5 rounded-full bg-orange-400 mr-1.5 animate-pulse"></span>
           Host View
@@ -255,33 +260,34 @@
 
   <!-- Application Logic -->
   <script>
-    // Initial State Store
-    const defaultEvents = [
-      {
-        id: 101,
-        theme: "Tech & Strategy Career Paths",
-        dateTime: "2026-11-12T19:00",
-        location: "Pavilion IX, West Lawn",
-        capacity: 6,
-        filled: 4
-      },
-      {
-        id: 102,
-        theme: "Navigating Case Method & Cold Calls",
-        dateTime: "2026-11-15T18:30",
-        location: "Ivy Road Apartments Common Room",
-        capacity: 5,
-        filled: 5
-      }
-    ];
+    // Dinners and accounts come from shared-data.js, so dinners created here show up
+    // on the browse and sign-up pages. This dashboard lists only your own dinners.
+    const user = requireLogin();
+    let allEvents = loadEvents();
+    let hostedEvents = myEvents();
 
-    let hostedEvents = JSON.parse(JSON.stringify(defaultEvents));
+    function myEvents() {
+      return allEvents.filter(e => user && normalizeEmail(e.hostEmail) === user.email);
+    }
+
+    function saveAndRender() {
+      saveEvents(allEvents);
+      hostedEvents = myEvents();
+      renderEvents();
+    }
 
     // Reset Data Helper
     function resetToDefaults() {
-      hostedEvents = JSON.parse(JSON.stringify(defaultEvents));
+      resetDemoData();
+      allEvents = loadEvents();
+      hostedEvents = myEvents();
       renderEvents();
       showToast('Dashboard reset to initial test data.', 'info');
+    }
+
+    function handleLogOut() {
+      logOut();
+      window.location.href = 'Account.html';
     }
 
     // Story 1: Form Validation & Event Creation
@@ -323,9 +329,17 @@
       // Requirement 2: Validation Rule - Date & Time
       const dateVal = dateInput.value;
       if (!dateVal) {
+        dateError.textContent = 'Please specify a date and time.';
         dateError.classList.remove('hidden');
         dateInput.classList.add('border-red-500', 'bg-red-50/30');
         errorMessages.push('Date & time is required.');
+        isValid = false;
+      } else if (new Date(dateVal) <= new Date()) {
+        // A past dinner would count as "hosted" right away under the hosting rule
+        dateError.textContent = 'Date & time must be in the future.';
+        dateError.classList.remove('hidden');
+        dateInput.classList.add('border-red-500', 'bg-red-50/30');
+        errorMessages.push('Date & time must be in the future.');
         isValid = false;
       }
 
@@ -361,11 +375,13 @@
         dateTime: dateVal,
         location: locationVal,
         capacity: capacityVal,
-        filled: 0 // Starts at 0
+        filled: 0, // Starts at 0
+        hostEmail: user.email,
+        signups: []
       };
 
-      hostedEvents.unshift(newEvent);
-      renderEvents();
+      allEvents.unshift(newEvent);
+      saveAndRender();
 
       // Clear Form
       document.getElementById('createDinnerForm').reset();
@@ -490,7 +506,7 @@
         const newCount = item.filled + delta;
         if (newCount >= 0 && newCount <= item.capacity) {
           item.filled = newCount;
-          renderEvents();
+          saveAndRender();
           showToast(`Updated status for "${item.theme}" to ${item.filled}/${item.capacity}`, 'info');
         }
       }
@@ -498,8 +514,9 @@
 
     // Delete Event
     function deleteEvent(id) {
-      hostedEvents = hostedEvents.filter(e => e.id !== id);
-      renderEvents();
+      // Only your own dinners can be deleted from here
+      allEvents = allEvents.filter(e => !(e.id === id && normalizeEmail(e.hostEmail) === user.email));
+      saveAndRender();
       showToast('Event removed.', 'info');
     }
 
@@ -586,6 +603,8 @@
 
     // Initial render on boot
     window.onload = function() {
+      if (!user) return; // requireLogin() is already redirecting to the account page
+      document.getElementById('currentUserLabel').textContent = `Logged in as ${user.name}`;
       renderEvents();
     };
   </script>

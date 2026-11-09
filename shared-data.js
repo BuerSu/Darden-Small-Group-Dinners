@@ -134,3 +134,160 @@ function requireLogin() {
   }
   return user;
 }
+
+// ---------- Dinners ----------
+//
+// Event shape: { id, theme, dateTime, location, capacity, filled, hostEmail, signups }
+// signups: [{ name, email, seats, family, diet, signedUpAt }]
+
+const EVENTS_KEY = 'darden-sgd-events-v2';
+
+// Demo accounts so reviewers can test the hosting rule (password: dinner123).
+// demo.guest has attended 3 dinners and hosted none, so is at the limit.
+// demo.host has hosted one dinner that already happened, so can attend 6.
+const demoAccounts = [
+  {
+    name: 'Demo Guest',
+    email: 'demo.guest@darden.virginia.edu',
+    salt: 'demo-salt-guest',
+    passwordHash: '8cf72898fa19288e5601aaee974e64e31dbacd8babe5b415e5e1e04098ec5b2b',
+    createdAt: '2026-10-01T12:00:00.000Z'
+  },
+  {
+    name: 'Demo Host',
+    email: 'demo.host@darden.virginia.edu',
+    salt: 'demo-salt-host',
+    passwordHash: 'd6d9eda1eeb4e70b326b732d52050e4733efcc3888fdff731c4ce96916732ea4',
+    createdAt: '2026-10-01T12:00:00.000Z'
+  }
+];
+
+function demoSignup(name, email) {
+  return { name, email, seats: 1, family: '', diet: 'None', signedUpAt: '2026-10-15T12:00:00.000Z' };
+}
+
+const defaultEvents = [
+  {
+    id: 100,
+    theme: "Summer Internship Stories",
+    dateTime: "2026-11-02T19:00",
+    location: "Pavilion IX, West Lawn",
+    capacity: 6,
+    filled: 5,
+    hostEmail: "demo.host@darden.virginia.edu",
+    signups: [demoSignup('Demo Guest', 'demo.guest@darden.virginia.edu')]
+  },
+  {
+    id: 101,
+    theme: "Tech & Strategy Career Paths",
+    dateTime: "2026-11-12T19:00",
+    location: "Pavilion IX, West Lawn",
+    capacity: 6,
+    filled: 4,
+    hostEmail: "demo.host@darden.virginia.edu",
+    signups: []
+  },
+  {
+    id: 102,
+    theme: "Navigating Case Method & Cold Calls",
+    dateTime: "2026-11-15T18:30",
+    location: "Ivy Road Apartments Common Room",
+    capacity: 5,
+    filled: 5,
+    hostEmail: "demo.host@darden.virginia.edu",
+    signups: []
+  },
+  {
+    id: 103,
+    theme: "International Student Connections",
+    dateTime: "2026-11-18T19:30",
+    location: "North Grounds Apartment Clubhouse",
+    capacity: 6,
+    filled: 2,
+    hostEmail: "classmate.a@darden.virginia.edu",
+    signups: [
+      demoSignup('Demo Guest', 'demo.guest@darden.virginia.edu'),
+      demoSignup('Demo Host', 'demo.host@darden.virginia.edu')
+    ]
+  },
+  {
+    id: 104,
+    theme: "Consulting Recruiting: Lessons from SYs",
+    dateTime: "2026-11-20T18:00",
+    location: "Pavilion IX, West Lawn",
+    capacity: 4,
+    filled: 1,
+    hostEmail: "classmate.b@darden.virginia.edu",
+    signups: [demoSignup('Demo Host', 'demo.host@darden.virginia.edu')]
+  },
+  {
+    id: 105,
+    theme: "Entrepreneurship & Startup Ideas",
+    dateTime: "2026-12-02T20:00",
+    location: "iLab Conference Room",
+    capacity: 8,
+    filled: 3,
+    hostEmail: "classmate.a@darden.virginia.edu",
+    signups: [
+      demoSignup('Demo Guest', 'demo.guest@darden.virginia.edu'),
+      demoSignup('Demo Host', 'demo.host@darden.virginia.edu')
+    ]
+  },
+  {
+    id: 106,
+    theme: "Family Life During the MBA",
+    dateTime: "2026-12-05T17:30",
+    location: "Ivy Road Apartments Common Room",
+    capacity: 6,
+    filled: 0,
+    hostEmail: "classmate.c@darden.virginia.edu",
+    signups: []
+  }
+];
+
+function loadEvents() {
+  return readJson(EVENTS_KEY, null) || JSON.parse(JSON.stringify(defaultEvents));
+}
+
+function saveEvents(events) {
+  writeJson(EVENTS_KEY, events);
+}
+
+// Make sure the demo accounts exist (without touching anyone else's account)
+function ensureDemoAccounts() {
+  const accounts = loadAccounts();
+  const missing = demoAccounts.filter(d => !accounts.some(a => a.email === d.email));
+  if (missing.length > 0) writeJson(ACCOUNTS_KEY, accounts.concat(missing));
+}
+
+// Restore the sample dinners. Accounts and the current login are kept.
+function resetDemoData() {
+  saveEvents(JSON.parse(JSON.stringify(defaultEvents)));
+  ensureDemoAccounts();
+}
+
+ensureDemoAccounts();
+
+// ---------- Hosting rule (story 9) ----------
+//
+// New students can attend 3 dinners before hosting. Each dinner they host
+// unlocks 3 more, but only once it has taken place. A sign-up counts once per
+// dinner, however many family seats it includes.
+
+const FREE_DINNERS = 3;
+const DINNERS_PER_HOSTED = 3;
+
+function dinnerAllowance(email, events = loadEvents()) {
+  const me = normalizeEmail(email);
+  const now = new Date();
+  const attended = events.filter(e => (e.signups || []).some(s => normalizeEmail(s.email) === me)).length;
+  const hostedHeld = events.filter(e => normalizeEmail(e.hostEmail) === me && new Date(e.dateTime) <= now).length;
+  const allowed = FREE_DINNERS + DINNERS_PER_HOSTED * hostedHeld;
+  return { attended, hostedHeld, allowed, remaining: Math.max(0, allowed - attended) };
+}
+
+// Signing up again for a dinner you're already in doesn't use up another dinner
+function isSignedUpFor(email, event) {
+  const me = normalizeEmail(email);
+  return (event.signups || []).some(s => normalizeEmail(s.email) === me);
+}

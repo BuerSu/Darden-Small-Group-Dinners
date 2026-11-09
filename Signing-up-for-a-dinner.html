@@ -30,6 +30,7 @@
       }
     }
   </script>
+  <script src="shared-data.js"></script>
 </head>
 <body class="h-full text-slate-800 antialiased flex flex-col font-sans">
 
@@ -47,6 +48,10 @@
       </div>
 
       <div class="flex items-center space-x-3">
+        <span id="currentUserLabel" class="hidden sm:inline text-xs text-slate-300"></span>
+        <button onclick="handleLogOut()" class="text-xs text-slate-300 hover:text-white underline px-2 py-1 transition">
+          Log Out
+        </button>
         <a href="Browsing-dinner-events.html" class="text-xs text-slate-300 hover:text-white underline px-2 py-1 transition">
           ← Browse Dinners
         </a>
@@ -112,32 +117,33 @@
               <div id="bannerErrorContent"></div>
             </div>
 
-            <!-- Full Name -->
+            <!-- Story 9: dinners left before hosting -->
+            <div id="allowanceNotice"></div>
+
+            <!-- Full Name (from the logged-in account) -->
             <div>
               <label for="fullName" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Full Name <span class="text-red-500">*</span>
+                Full Name <span class="text-slate-400 font-normal">(From your account)</span>
               </label>
               <input
                 type="text"
                 id="fullName"
-                placeholder="e.g. Thomas Jefferson"
-                class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition"
+                readonly
+                class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 bg-slate-50 text-slate-600 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition"
               />
-              <p id="nameError" class="hidden text-xs text-red-600 font-medium mt-1">Please enter your name.</p>
             </div>
 
             <!-- Email -->
             <div>
               <label for="email" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Email (for your confirmation) <span class="text-red-500">*</span>
+                Email <span class="text-slate-400 font-normal">(From your account; your confirmation goes here)</span>
               </label>
               <input
                 type="email"
                 id="email"
-                placeholder="e.g. jeffersont27@darden.virginia.edu"
-                class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition"
+                readonly
+                class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 bg-slate-50 text-slate-600 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition"
               />
-              <p id="emailError" class="hidden text-xs text-red-600 font-medium mt-1">Please enter a valid email address.</p>
             </div>
 
             <!-- Family Members -->
@@ -248,90 +254,41 @@
 
   <!-- Application Logic -->
   <script>
-    // Shared event store. Uses the same event shape as Creating-a-dinner-event.html
-    // ({ id, theme, dateTime, location, capacity, filled }) plus a "signups"
-    // list, saved in localStorage so Browsing-dinner-events.html sees the new seat counts.
-    const STORAGE_KEY = 'darden-sgd-events';
-
-    const defaultEvents = [
-      {
-        id: 101,
-        theme: "Tech & Strategy Career Paths",
-        dateTime: "2026-11-12T19:00",
-        location: "Pavilion IX, West Lawn",
-        capacity: 6,
-        filled: 4
-      },
-      {
-        id: 102,
-        theme: "Navigating Case Method & Cold Calls",
-        dateTime: "2026-11-15T18:30",
-        location: "Ivy Road Apartments Common Room",
-        capacity: 5,
-        filled: 5
-      },
-      {
-        id: 103,
-        theme: "International Student Connections",
-        dateTime: "2026-11-18T19:30",
-        location: "North Grounds Apartment Clubhouse",
-        capacity: 6,
-        filled: 2
-      },
-      {
-        id: 104,
-        theme: "Consulting Recruiting: Lessons from SYs",
-        dateTime: "2026-11-20T18:00",
-        location: "Pavilion IX, West Lawn",
-        capacity: 4,
-        filled: 1
-      },
-      {
-        id: 105,
-        theme: "Entrepreneurship & Startup Ideas",
-        dateTime: "2026-12-02T20:00",
-        location: "iLab Conference Room",
-        capacity: 8,
-        filled: 3
-      },
-      {
-        id: 106,
-        theme: "Family Life During the MBA",
-        dateTime: "2026-12-05T17:30",
-        location: "Ivy Road Apartments Common Room",
-        capacity: 6,
-        filled: 0
-      }
-    ];
-
+    // Dinners and accounts come from shared-data.js
+    const user = requireLogin();
     let allEvents = loadEvents();
     let selectedId = null;
 
-    function loadEvents() {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) return JSON.parse(saved);
-      } catch (e) {
-        // Storage unavailable (private window, blocked site data) - fall back to defaults
-      }
-      return JSON.parse(JSON.stringify(defaultEvents));
-    }
-
-    function saveEvents() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(allEvents));
-      } catch (e) {
-        // Ignore - data will just not persist across pages
-      }
-    }
-
     // Reset Data Helper
     function resetToDefaults() {
-      allEvents = JSON.parse(JSON.stringify(defaultEvents));
-      saveEvents();
+      resetDemoData();
+      allEvents = loadEvents();
       populateDinnerSelect();
       selectDinner(selectedId);
+      renderAllowance();
       showToast('Dinners reset to initial test data.', 'info');
+    }
+
+    function handleLogOut() {
+      logOut();
+      window.location.href = 'Account.html';
+    }
+
+    // Story 9: can this student join another dinner, or do they need to host first?
+    function canJoin(event) {
+      return isSignedUpFor(user.email, event) || dinnerAllowance(user.email, allEvents).remaining > 0;
+    }
+
+    function renderAllowance() {
+      const box = document.getElementById('allowanceNotice');
+      const a = dinnerAllowance(user.email, allEvents);
+      if (a.remaining > 0) {
+        box.className = 'border rounded-lg p-3 text-xs bg-slate-50 border-slate-200 text-slate-600';
+        box.textContent = `You can join ${a.remaining} more dinner${a.remaining === 1 ? '' : 's'} before you need to host one. (Joined: ${a.attended} · Hosted: ${a.hostedHeld})`;
+      } else {
+        box.className = 'border rounded-lg p-3 text-xs bg-darden-lightOrange border-orange-200 text-orange-900';
+        box.innerHTML = `You have joined ${a.attended} dinners and hosted ${a.hostedHeld}. Students can join 3 dinners for every dinner they host, so please <a href="Creating-a-dinner-event.html" class="font-semibold underline">host a dinner</a> to join more. Your hosted dinner counts once it has taken place.`;
+      }
     }
 
     function findEvent(id) {
@@ -424,7 +381,7 @@
         </div>
       `;
 
-      submitBtn.disabled = past || isFull;
+      submitBtn.disabled = past || isFull || !canJoin(event);
     }
 
     function notice(color, text) {
@@ -436,10 +393,10 @@
     }
 
     function clearErrors() {
-      ['fullName', 'email', 'familyCount', 'familyNames'].forEach(id => {
+      ['familyCount', 'familyNames'].forEach(id => {
         document.getElementById(id).classList.remove('border-red-500', 'bg-red-50/30');
       });
-      ['nameError', 'emailError', 'familyCountError', 'familyNamesError', 'familyConfirmError', 'bannerError'].forEach(id => {
+      ['familyCountError', 'familyNamesError', 'familyConfirmError', 'bannerError'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
       });
     }
@@ -469,28 +426,15 @@
       e.preventDefault();
       clearErrors();
 
-      const nameInput = document.getElementById('fullName');
-      const emailInput = document.getElementById('email');
-      const dietInput = document.getElementById('diet');
-
-      const name = nameInput.value.trim();
-      const email = emailInput.value.trim();
-      const diet = dietInput.value.trim();
+      // Name and email always come from the logged-in account
+      const name = user.name;
+      const email = user.email;
+      const diet = document.getElementById('diet').value.trim();
       const familyRaw = document.getElementById('familyCount').value.trim();
       const familyCount = familyRaw === '' ? 0 : Number(familyRaw);
       const familyNames = document.getElementById('familyNames').value.trim();
       const familyConfirmed = document.getElementById('familyConfirm').checked;
       const errors = [];
-
-      if (!name) {
-        markInvalid('fullName', 'nameError');
-        errors.push('Please enter your name.');
-      }
-
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        markInvalid('email', 'emailError');
-        errors.push('Please enter a valid email address.');
-      }
 
       if (!Number.isInteger(familyCount) || familyCount < 0) {
         markInvalid('familyCount', 'familyCountError', 'Enter a whole number of family members (0 or more).');
@@ -522,12 +466,15 @@
         const message = `Only ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left, so you can bring at most ${spotsLeft - 1} family member${spotsLeft - 1 === 1 ? '' : 's'}.`;
         markInvalid('familyCount', 'familyCountError', message);
         errors.push(message);
+      } else if (!canJoin(event)) {
+        errors.push('You have joined as many dinners as you can for now. Host a dinner to join more.');
       }
 
       if (errors.length > 0) {
         // Refresh seat counts in case another sign-up changed them
         populateDinnerSelect();
         selectDinner(selectedId);
+        renderAllowance();
         showBannerErrors(errors);
         return;
       }
@@ -543,11 +490,13 @@
         signedUpAt: new Date().toISOString()
       });
       event.filled += seats;
-      saveEvents();
+      saveEvents(allEvents);
 
       showConfirmation(event, name, email, diet, seats, familyNames);
       document.getElementById('signupForm').reset();
+      fillAccountFields();
       toggleFamilyFields();
+      renderAllowance();
       populateDinnerSelect();
       document.getElementById('dinnerSelect').value = String(event.id);
       showToast('Success! Your seat is reserved.', 'success');
@@ -626,8 +575,17 @@ Darden Small Group Dinners`;
         .replace(/'/g, "&#039;");
     }
 
+    function fillAccountFields() {
+      document.getElementById('fullName').value = user.name;
+      document.getElementById('email').value = user.email;
+    }
+
     // Initial render on boot: preselect the dinner passed as ?event=ID from the browse page
     window.onload = function() {
+      if (!user) return; // requireLogin() is already redirecting to the account page
+      document.getElementById('currentUserLabel').textContent = `Logged in as ${user.name}`;
+      fillAccountFields();
+      renderAllowance();
       populateDinnerSelect();
       selectDinner(new URLSearchParams(window.location.search).get('event'));
     };
