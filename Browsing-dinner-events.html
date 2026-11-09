@@ -196,7 +196,7 @@
   <!-- Application Logic -->
   <script>
     // Shared event store. Uses the same event shape as Creating-a-dinner-event.html
-    // ({ id, theme, dateTime, location, capacity, filled, dietary }) and is saved in
+    // ({ id, theme, dateTime, location, capacity, filled }) and is saved in
     // localStorage so sign-ups made on Signing-up-for-a-dinner.html show up here.
     const STORAGE_KEY = 'darden-sgd-events';
 
@@ -207,8 +207,7 @@
         dateTime: "2026-11-12T19:00",
         location: "Pavilion IX, West Lawn",
         capacity: 6,
-        filled: 4,
-        dietary: "Gluten-Free & Vegetarian friendly options"
+        filled: 4
       },
       {
         id: 102,
@@ -216,8 +215,7 @@
         dateTime: "2026-11-15T18:30",
         location: "Ivy Road Apartments Common Room",
         capacity: 5,
-        filled: 5,
-        dietary: "Nut allergy in group"
+        filled: 5
       },
       {
         id: 103,
@@ -225,8 +223,7 @@
         dateTime: "2026-11-18T19:30",
         location: "North Grounds Apartment Clubhouse",
         capacity: 6,
-        filled: 2,
-        dietary: "Halal options provided"
+        filled: 2
       },
       {
         id: 104,
@@ -234,8 +231,7 @@
         dateTime: "2026-11-20T18:00",
         location: "Pavilion IX, West Lawn",
         capacity: 4,
-        filled: 1,
-        dietary: "None specified"
+        filled: 1
       },
       {
         id: 105,
@@ -243,8 +239,7 @@
         dateTime: "2026-12-02T20:00",
         location: "iLab Conference Room",
         capacity: 8,
-        filled: 3,
-        dietary: "Vegan friendly"
+        filled: 3
       },
       {
         id: 106,
@@ -252,8 +247,7 @@
         dateTime: "2026-12-05T17:30",
         location: "Ivy Road Apartments Common Room",
         capacity: 6,
-        filled: 0,
-        dietary: "Kid-friendly menu"
+        filled: 0
       }
     ];
 
@@ -408,16 +402,6 @@
                 </span>
               </div>
             </div>
-
-            <!-- Host's Dietary Notes -->
-            ${event.dietary && event.dietary !== 'None specified' ? `
-              <div class="bg-amber-50 border border-amber-200/70 text-amber-900 rounded-lg p-2 text-xs flex items-start space-x-1.5">
-                <svg class="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <div>
-                  <strong class="font-semibold text-amber-800">Dietary Notes:</strong> ${escapeHtml(event.dietary)}
-                </div>
-              </div>
-            ` : ''}
 
             <!-- Action Row -->
             <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
