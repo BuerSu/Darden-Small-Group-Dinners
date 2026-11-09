@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Darden Small Group Dinners - Account</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            darden: {
+              orange: '#E57200',
+              navy: '#002F6C',
+              lightOrange: '#FFF4E6',
+              darkOrange: '#C45D00',
+              softNavy: '#1A437E'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="shared-data.js"></script>
+</head>
+<body class="h-full text-slate-800 antialiased flex flex-col font-sans">
+
+  <!-- Main Navigation Header -->
+  <header class="bg-darden-navy text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 bg-darden-orange text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-sm">
+          D
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg leading-tight tracking-tight">Darden Small Group Dinners</h1>
+          <p class="text-xs text-slate-300 font-light">Your Account</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Banner Container -->
+  <div id="toastContainer" class="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full"></div>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+
+    <!-- Shown when someone was sent here from a page that needs an account -->
+    <div id="loginRequiredNotice" class="hidden bg-darden-lightOrange border border-orange-200 text-orange-900 rounded-lg p-3 text-sm">
+      Please log in or create an account to host or sign up for a dinner.
+    </div>
+
+    <!-- LOGGED-IN VIEW -->
+    <section id="loggedInView" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="bg-slate-50 p-4 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="font-bold text-slate-800 text-base">You're Logged In</h2>
+        <span class="text-xs text-slate-500 font-medium">User Stories 7 &amp; 8</span>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <p class="text-lg font-bold text-slate-900" id="userName"></p>
+          <p class="text-sm text-slate-500" id="userEmail"></p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <a href="Creating-a-dinner-event.html" class="flex-1 text-center bg-darden-orange hover:bg-darden-darkOrange text-white font-semibold py-2 px-4 rounded-lg transition text-sm">
+            Host a Dinner
+          </a>
+          <a href="Browsing-dinner-events.html" class="flex-1 text-center bg-darden-navy hover:bg-darden-softNavy text-white font-semibold py-2 px-4 rounded-lg transition text-sm">
+            Find a Dinner
+          </a>
+          <button onclick="handleLogOut()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition text-sm">
+            Log Out
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOGGED-OUT VIEW -->
+    <div id="loggedOutView" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+
+      <!-- Story 7: Create Account -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="bg-slate-50 p-4 border-b border-slate-200 flex items-center justify-between">
+          <h2 class="font-bold text-slate-800 text-base">Create an Account</h2>
+          <span class="text-xs text-slate-500 font-medium">User Story 7</span>
+        </div>
+
+        <form id="createForm" onsubmit="handleCreate(event)" novalidate class="p-5 space-y-4">
+          <p id="createFormError" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700"></p>
+
+          <div>
+            <label for="newName" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+              Full Name <span class="text-red-500">*</span>
+            </label>
+            <input type="text" id="newName" autocomplete="name" placeholder="e.g. Thomas Jefferson"
+              class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition" />
+            <p id="newNameError" class="hidden text-xs text-red-600 font-medium mt-1"></p>
+          </div>
+
+          <div>
+            <label for="newEmail" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+              Darden Email <span class="text-red-500">*</span>
+            </label>
+            <input type="email" id="newEmail" autocomplete="email" placeholder="e.g. jeffersont27@darden.virginia.edu"
+              class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition" />
+            <p id="newEmailError" class="hidden text-xs text-red-600 font-medium mt-1"></p>
+          </div>
+
+          <div>
+            <label for="newPassword" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+              Password <span class="text-red-500">*</span>
+            </label>
+            <input type="password" id="newPassword" autocomplete="new-password" placeholder="At least 8 characters"
+              class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition" />
+            <p id="newPasswordError" class="hidden text-xs text-red-600 font-medium mt-1"></p>
+          </div>
+
+          <div>
+            <label for="confirmPassword" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+              Confirm Password <span class="text-red-500">*</span>
+            </label>
+            <input type="password" id="confirmPassword" autocomplete="new-password"
+              class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition" />
+            <p id="confirmPasswordError" class="hidden text-xs text-red-600 font-medium mt-1"></p>
+          </div>
+
+          <button type="submit" class="w-full bg-darden-orange hover:bg-darden-darkOrange text-white font-semibold py-2.5 px-4 rounded-lg shadow-sm transition text-sm">
+            Create Account
+          </button>
+        </form>
+      </section>
+
+      <!-- Story 8: Log In -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="bg-slate-50 p-4 border-b border-slate-200 flex items-center justify-between">
+          <h2 class="font-bold text-slate-800 text-base">Log In</h2>
+          <span class="text-xs text-slate-500 font-medium">User Story 8</span>
+        </div>
+
+        <form id="loginForm" onsubmit="handleLogIn(event)" novalidate class="p-5 space-y-4">
+          <p id="loginError" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700"></p>
+
+          <div>
+            <label for="loginEmail" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+              Darden Email
+            </label>
+            <input type="email" id="loginEmail" autocomplete="username"
+              class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition" />
+          </div>
+
+          <div>
+            <label for="loginPassword" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+              Password
+            </label>
+            <input type="password" id="loginPassword" autocomplete="current-password"
+              class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition" />
+          </div>
+
+          <button type="submit" class="w-full bg-darden-navy hover:bg-darden-softNavy text-white font-semibold py-2.5 px-4 rounded-lg shadow-sm transition text-sm">
+            Log In
+          </button>
+        </form>
+      </section>
+    </div>
+
+    <p class="text-[11px] text-slate-400 text-center">
+      Prototype: accounts are saved only in this browser. The real app would use UVA NetBadge sign-in.
+    </p>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-500">
+    <p>Darden School of Business — Small Group Dinner Platform Assignment Demo</p>
+  </footer>
+
+  <!-- Application Logic -->
+  <script>
+    const nextPage = safeNextPage(new URLSearchParams(window.location.search).get('next'));
+
+    function render() {
+      const user = currentUser();
+      document.getElementById('loggedInView').classList.toggle('hidden', !user);
+      document.getElementById('loggedOutView').classList.toggle('hidden', !!user);
+      document.getElementById('loginRequiredNotice').classList.toggle('hidden', !!user || !nextPage);
+      if (user) {
+        document.getElementById('userName').textContent = user.name;
+        document.getElementById('userEmail').textContent = user.email;
+      }
+    }
+
+    // After logging in, return to the page that asked for it (if any)
+    function finishLogin(message) {
+      if (nextPage) {
+        window.location.href = nextPage;
+        return;
+      }
+      render();
+      showToast(message, 'success');
+    }
+
+    // Story 7: Create account
+    async function handleCreate(event) {
+      event.preventDefault();
+      const fields = {
+        name: ['newName', 'newNameError'],
+        email: ['newEmail', 'newEmailError'],
+        password: ['newPassword', 'newPasswordError'],
+        confirmPassword: ['confirmPassword', 'confirmPasswordError']
+      };
+      Object.values(fields).forEach(([inputId, errorId]) => {
+        document.getElementById(inputId).classList.remove('border-red-500', 'bg-red-50/30');
+        document.getElementById(errorId).classList.add('hidden');
+      });
+      const formError = document.getElementById('createFormError');
+      formError.classList.add('hidden');
+
+      let result;
+      try {
+        result = await createAccount(
+          document.getElementById('newName').value,
+          document.getElementById('newEmail').value,
+          document.getElementById('newPassword').value,
+          document.getElementById('confirmPassword').value
+        );
+      } catch (e) {
+        result = { ok: false, errors: { form: e.message } };
+      }
+
+      if (!result.ok) {
+        Object.entries(result.errors).forEach(([field, message]) => {
+          if (field === 'form') {
+            formError.textContent = message;
+            formError.classList.remove('hidden');
+            return;
+          }
+          const [inputId, errorId] = fields[field];
+          document.getElementById(inputId).classList.add('border-red-500', 'bg-red-50/30');
+          const errorEl = document.getElementById(errorId);
+          errorEl.textContent = message;
+          errorEl.classList.remove('hidden');
+        });
+        showToast('Your account was not created. See the errors above.', 'error');
+        return;
+      }
+
+      document.getElementById('createForm').reset();
+      finishLogin(`Welcome, ${result.account.name}! Your account is ready.`);
+    }
+
+    // Story 8: Log in
+    async function handleLogIn(event) {
+      event.preventDefault();
+      const errorEl = document.getElementById('loginError');
+      errorEl.classList.add('hidden');
+
+      let result;
+      try {
+        result = await logIn(
+          document.getElementById('loginEmail').value,
+          document.getElementById('loginPassword').value
+        );
+      } catch (e) {
+        result = { ok: false, error: e.message };
+      }
+
+      if (!result.ok) {
+        errorEl.textContent = result.error;
+        errorEl.classList.remove('hidden');
+        document.getElementById('loginPassword').value = '';
+        return;
+      }
+
+      document.getElementById('loginForm').reset();
+      finishLogin(`Welcome back, ${result.account.name}!`);
+    }
+
+    // Story 8: Log out
+    function handleLogOut() {
+      logOut();
+      render();
+      showToast('You have been logged out.', 'info');
+    }
+
+    // Custom Toast Notification System (Replaces alert())
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto flex items-center justify-between p-3.5 rounded-lg shadow-lg text-xs font-medium border text-white transition-all transform duration-300 translate-y-2 opacity-0 ${
+        type === 'success' ? 'bg-emerald-600 border-emerald-500' :
+        type === 'error' ? 'bg-rose-600 border-rose-500' :
+        'bg-slate-800 border-slate-700'
+      }`;
+
+      toast.innerHTML = `
+        <div class="flex items-center space-x-2">
+          <span>${escapeHtml(message)}</span>
+        </div>
+        <button onclick="this.parentElement.remove()" class="ml-3 text-white/70 hover:text-white">✕</button>
+      `;
+
+      container.appendChild(toast);
+
+      // Animate In
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      // Auto dismiss
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Security HTML Escaper
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    window.addEventListener('pageshow', render);
+  </script>
+</body>
+</html>
