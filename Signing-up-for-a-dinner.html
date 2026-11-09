@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Darden Small Group Dinners - Sign Up</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            darden: {
+              orange: '#E57200',
+              navy: '#002F6C',
+              lightOrange: '#FFF4E6',
+              darkOrange: '#C45D00',
+              softNavy: '#1A437E'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="h-full text-slate-800 antialiased flex flex-col font-sans">
+
+  <!-- Main Navigation Header -->
+  <header class="bg-darden-navy text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 bg-darden-orange text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-sm">
+          D
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg leading-tight tracking-tight">Darden Small Group Dinners</h1>
+          <p class="text-xs text-slate-300 font-light">Reserve Your Seat</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <a href="Browsing-dinner-events.html" class="text-xs text-slate-300 hover:text-white underline px-2 py-1 transition">
+          ← Browse Dinners
+        </a>
+        <button onclick="resetToDefaults()" class="text-xs text-slate-300 hover:text-white underline px-2 py-1 transition">
+          Reset Demo Data
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Banner Container -->
+  <div id="toastContainer" class="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full"></div>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+      <!-- COLUMN 1: Selected Dinner -->
+      <section class="lg:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="bg-slate-50 p-4 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <svg class="w-5 h-5 text-darden-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            <h2 class="font-bold text-slate-800 text-base">Your Dinner</h2>
+          </div>
+          <span class="text-xs text-slate-500 font-medium">User Story 5</span>
+        </div>
+
+        <div class="p-5 space-y-4">
+          <div>
+            <label for="dinnerSelect" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+              Choose a Dinner
+            </label>
+            <select
+              id="dinnerSelect"
+              onchange="onDinnerChange(this.value)"
+              class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition"
+            >
+              <!-- Populated via JS -->
+            </select>
+          </div>
+
+          <!-- Selected Dinner Details -->
+          <div id="dinnerDetails">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUMN 2: Sign-Up Form & Confirmation -->
+      <section class="lg:col-span-7 space-y-4">
+
+        <div id="signupCard" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="bg-slate-50 p-4 border-b border-slate-200 flex items-center space-x-2">
+            <svg class="w-5 h-5 text-darden-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+            <h2 class="font-bold text-slate-800 text-base">Sign Up</h2>
+          </div>
+
+          <form id="signupForm" onsubmit="handleSignup(event)" novalidate class="p-5 space-y-4">
+
+            <!-- Banner Error Box -->
+            <div id="bannerError" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 flex items-start space-x-2">
+              <svg class="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <div id="bannerErrorContent"></div>
+            </div>
+
+            <!-- Full Name -->
+            <div>
+              <label for="fullName" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Full Name <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="fullName"
+                placeholder="e.g. Thomas Jefferson"
+                class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition"
+              />
+              <p id="nameError" class="hidden text-xs text-red-600 font-medium mt-1">Please enter your name.</p>
+            </div>
+
+            <!-- Email -->
+            <div>
+              <label for="email" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Email (for your confirmation) <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                id="email"
+                placeholder="e.g. jeffersont27@darden.virginia.edu"
+                class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition"
+              />
+              <p id="emailError" class="hidden text-xs text-red-600 font-medium mt-1">Please enter a valid email address.</p>
+            </div>
+
+            <!-- Family Members -->
+            <div>
+              <label for="familyCount" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Family Members Joining You <span class="text-slate-400 font-normal">(Partner, child, etc.)</span>
+              </label>
+              <input
+                type="number"
+                id="familyCount"
+                value="0"
+                min="0"
+                oninput="toggleFamilyFields()"
+                class="w-28 text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition"
+              />
+              <p id="familyCountError" class="hidden text-xs text-red-600 font-medium mt-1"></p>
+
+              <div id="familyFields" class="hidden mt-3 space-y-2">
+                <input
+                  type="text"
+                  id="familyNames"
+                  placeholder="Names and relationship, e.g. Martha Jefferson (spouse)"
+                  class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition"
+                />
+                <p id="familyNamesError" class="hidden text-xs text-red-600 font-medium">Please list who is coming with you.</p>
+                <label class="flex items-start space-x-2 text-xs text-slate-600 cursor-pointer select-none">
+                  <input type="checkbox" id="familyConfirm" class="mt-0.5 rounded border-slate-300 text-darden-orange focus:ring-darden-orange/50" />
+                  <span>I confirm these guests are my family members. Extra seats are for family only.</span>
+                </label>
+                <p id="familyConfirmError" class="hidden text-xs text-red-600 font-medium">Please confirm that your extra guests are family members.</p>
+              </div>
+            </div>
+
+            <!-- Dietary Restrictions -->
+            <div>
+              <label for="diet" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Dietary Restrictions <span class="text-slate-400 font-normal">(Optional, for you and your family; shared with the host)</span>
+              </label>
+              <input
+                type="text"
+                id="diet"
+                placeholder="e.g. Vegetarian, Nut allergy"
+                class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition"
+              />
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-2">
+              <button
+                type="submit"
+                id="submitBtn"
+                class="w-full bg-darden-orange hover:bg-darden-darkOrange text-white font-semibold py-2.5 px-4 rounded-lg shadow-sm transition duration-150 flex items-center justify-center space-x-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                <span>Reserve My Seat</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Confirmation (shown after a successful sign-up) -->
+        <div id="confirmationCard" class="hidden bg-white rounded-xl shadow-sm border border-emerald-200 overflow-hidden">
+          <div class="bg-emerald-50 p-4 border-b border-emerald-200 flex items-center space-x-2">
+            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 class="font-bold text-emerald-900 text-base">Your Seat Is Secured</h2>
+          </div>
+
+          <div class="p-5 space-y-4">
+            <p class="text-xs text-slate-500">
+              A confirmation email has been prepared for you. <span class="italic">This prototype has no email server, so the email is shown below; use the button to send it to your own inbox.</span>
+            </p>
+
+            <!-- Email Preview -->
+            <div class="border border-slate-200 rounded-lg overflow-hidden text-sm">
+              <div class="bg-slate-50 px-4 py-2 border-b border-slate-200 space-y-0.5 text-xs">
+                <div><span class="text-slate-400 w-16 inline-block">To:</span> <span id="emailTo" class="font-medium text-slate-700"></span></div>
+                <div><span class="text-slate-400 w-16 inline-block">Subject:</span> <span id="emailSubject" class="font-medium text-slate-700"></span></div>
+              </div>
+              <pre id="emailBody" class="px-4 py-3 whitespace-pre-wrap font-sans text-slate-700 text-sm leading-relaxed"></pre>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2">
+              <a
+                id="mailtoLink"
+                href="#"
+                class="flex-1 text-center bg-darden-navy hover:bg-darden-softNavy text-white font-semibold py-2 px-4 rounded-lg transition text-sm"
+              >
+                Send to My Inbox
+              </a>
+              <a
+                href="Browsing-dinner-events.html"
+                class="flex-1 text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition text-sm"
+              >
+                Browse More Dinners
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-500">
+    <p>Darden School of Business — Small Group Dinner Platform Assignment Demo</p>
+  </footer>
+
+  <!-- Application Logic -->
+  <script>
+    // Shared event store. Uses the same event shape as Creating-a-dinner-event.html
+    // ({ id, theme, dateTime, location, capacity, filled }) plus a "signups"
+    // list, saved in localStorage so Browsing-dinner-events.html sees the new seat counts.
+    const STORAGE_KEY = 'darden-sgd-events';
+
+    const defaultEvents = [
+      {
+        id: 101,
+        theme: "Tech & Strategy Career Paths",
+        dateTime: "2026-11-12T19:00",
+        location: "Pavilion IX, West Lawn",
+        capacity: 6,
+        filled: 4
+      },
+      {
+        id: 102,
+        theme: "Navigating Case Method & Cold Calls",
+        dateTime: "2026-11-15T18:30",
+        location: "Ivy Road Apartments Common Room",
+        capacity: 5,
+        filled: 5
+      },
+      {
+        id: 103,
+        theme: "International Student Connections",
+        dateTime: "2026-11-18T19:30",
+        location: "North Grounds Apartment Clubhouse",
+        capacity: 6,
+        filled: 2
+      },
+      {
+        id: 104,
+        theme: "Consulting Recruiting: Lessons from SYs",
+        dateTime: "2026-11-20T18:00",
+        location: "Pavilion IX, West Lawn",
+        capacity: 4,
+        filled: 1
+      },
+      {
+        id: 105,
+        theme: "Entrepreneurship & Startup Ideas",
+        dateTime: "2026-12-02T20:00",
+        location: "iLab Conference Room",
+        capacity: 8,
+        filled: 3
+      },
+      {
+        id: 106,
+        theme: "Family Life During the MBA",
+        dateTime: "2026-12-05T17:30",
+        location: "Ivy Road Apartments Common Room",
+        capacity: 6,
+        filled: 0
+      }
+    ];
+
+    let allEvents = loadEvents();
+    let selectedId = null;
+
+    function loadEvents() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        // Storage unavailable (private window, blocked site data) - fall back to defaults
+      }
+      return JSON.parse(JSON.stringify(defaultEvents));
+    }
+
+    function saveEvents() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(allEvents));
+      } catch (e) {
+        // Ignore - data will just not persist across pages
+      }
+    }
+
+    // Reset Data Helper
+    function resetToDefaults() {
+      allEvents = JSON.parse(JSON.stringify(defaultEvents));
+      saveEvents();
+      populateDinnerSelect();
+      selectDinner(selectedId);
+      showToast('Dinners reset to initial test data.', 'info');
+    }
+
+    function findEvent(id) {
+      return allEvents.find(e => String(e.id) === String(id));
+    }
+
+    function isPast(event) {
+      return new Date(event.dateTime) <= new Date();
+    }
+
+    // Always US English so the confirmation email reads the same on every machine
+    function formatDate(dateTime) {
+      return new Date(dateTime).toLocaleString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Upcoming dinners, soonest first, for the picker
+    function populateDinnerSelect() {
+      const select = document.getElementById('dinnerSelect');
+      const upcoming = allEvents
+        .filter(e => !isPast(e))
+        .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+
+      select.innerHTML = `<option value="">Select a dinner…</option>` + upcoming.map(e => {
+        const full = e.filled >= e.capacity;
+        return `<option value="${e.id}">${escapeHtml(e.theme)} — ${formatDate(e.dateTime)}${full ? ' (Full)' : ''}</option>`;
+      }).join('');
+    }
+
+    // Picking a different dinner starts a fresh sign-up
+    function onDinnerChange(id) {
+      clearErrors();
+      document.getElementById('confirmationCard').classList.add('hidden');
+      document.getElementById('signupCard').classList.remove('hidden');
+      selectDinner(id);
+    }
+
+    function selectDinner(id) {
+      selectedId = id || null;
+      const select = document.getElementById('dinnerSelect');
+      const details = document.getElementById('dinnerDetails');
+      const submitBtn = document.getElementById('submitBtn');
+      const event = selectedId ? findEvent(selectedId) : null;
+
+      select.value = event && !isPast(event) ? String(event.id) : '';
+
+      if (!event) {
+        details.innerHTML = notice('slate', selectedId
+          ? 'That dinner could not be found. It may have been removed by the host. Please choose another dinner above.'
+          : 'Choose a dinner above to see its details and reserve a seat.');
+        submitBtn.disabled = true;
+        return;
+      }
+
+      const spotsLeft = event.capacity - event.filled;
+      const isFull = spotsLeft <= 0;
+      const past = isPast(event);
+
+      details.innerHTML = `
+        <div class="space-y-3">
+          <h3 class="font-bold text-slate-900 text-lg leading-snug">${escapeHtml(event.theme)}</h3>
+          <div class="space-y-1.5 text-sm text-slate-600">
+            <div class="flex items-center">
+              <svg class="w-4 h-4 text-slate-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              ${formatDate(event.dateTime)}
+            </div>
+            <div class="flex items-center">
+              <svg class="w-4 h-4 text-slate-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+              ${escapeHtml(event.location)}
+            </div>
+          </div>
+
+          <div>
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/60">
+              <div class="h-full ${isFull ? 'bg-rose-500' : 'bg-darden-orange'}" style="width: ${Math.min(100, Math.round((event.filled / event.capacity) * 100))}%"></div>
+            </div>
+            <div class="flex justify-between items-center text-[11px] text-slate-400 mt-1">
+              <span>${event.filled} / ${event.capacity} signed up</span>
+              <span>${Math.max(0, spotsLeft)} spot${spotsLeft === 1 ? '' : 's'} left</span>
+            </div>
+          </div>
+
+          ${past ? notice('rose', 'This dinner has already taken place, so sign-ups are closed.') : ''}
+          ${!past && isFull ? notice('rose', 'This dinner is full. Please choose another dinner.') : ''}
+        </div>
+      `;
+
+      submitBtn.disabled = past || isFull;
+    }
+
+    function notice(color, text) {
+      const styles = {
+        slate: 'bg-slate-50 border-slate-200 text-slate-600',
+        rose: 'bg-rose-50 border-rose-200 text-rose-800'
+      };
+      return `<div class="border rounded-lg p-3 text-xs font-medium ${styles[color]}">${escapeHtml(text)}</div>`;
+    }
+
+    function clearErrors() {
+      ['fullName', 'email', 'familyCount', 'familyNames'].forEach(id => {
+        document.getElementById(id).classList.remove('border-red-500', 'bg-red-50/30');
+      });
+      ['nameError', 'emailError', 'familyCountError', 'familyNamesError', 'familyConfirmError', 'bannerError'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+    }
+
+    // Names and the family-only confirmation are only needed when bringing family
+    function toggleFamilyFields() {
+      const count = parseInt(document.getElementById('familyCount').value, 10);
+      document.getElementById('familyFields').classList.toggle('hidden', !(count > 0));
+    }
+
+    function markInvalid(inputId, errorId, message) {
+      if (inputId) document.getElementById(inputId).classList.add('border-red-500', 'bg-red-50/30');
+      const error = document.getElementById(errorId);
+      if (message) error.textContent = message;
+      error.classList.remove('hidden');
+    }
+
+    function showBannerErrors(messages) {
+      document.getElementById('bannerErrorContent').innerHTML =
+        `<p class="font-semibold">Sign-Up Failed:</p><ul class="list-disc list-inside mt-0.5">${messages.map(m => `<li>${escapeHtml(m)}</li>`).join('')}</ul>`;
+      document.getElementById('bannerError').classList.remove('hidden');
+      showToast('Your seat was not reserved. See the errors above.', 'error');
+    }
+
+    // Story 5: Validate, reserve the seat, and produce the confirmation email
+    function handleSignup(e) {
+      e.preventDefault();
+      clearErrors();
+
+      const nameInput = document.getElementById('fullName');
+      const emailInput = document.getElementById('email');
+      const dietInput = document.getElementById('diet');
+
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+      const diet = dietInput.value.trim();
+      const familyRaw = document.getElementById('familyCount').value.trim();
+      const familyCount = familyRaw === '' ? 0 : Number(familyRaw);
+      const familyNames = document.getElementById('familyNames').value.trim();
+      const familyConfirmed = document.getElementById('familyConfirm').checked;
+      const errors = [];
+
+      if (!name) {
+        markInvalid('fullName', 'nameError');
+        errors.push('Please enter your name.');
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        markInvalid('email', 'emailError');
+        errors.push('Please enter a valid email address.');
+      }
+
+      if (!Number.isInteger(familyCount) || familyCount < 0) {
+        markInvalid('familyCount', 'familyCountError', 'Enter a whole number of family members (0 or more).');
+        errors.push('Enter a whole number of family members (0 or more).');
+      } else if (familyCount > 0) {
+        if (!familyNames) {
+          markInvalid('familyNames', 'familyNamesError');
+          errors.push('Please list who is coming with you.');
+        }
+        if (!familyConfirmed) {
+          markInvalid(null, 'familyConfirmError');
+          errors.push('Please confirm that your extra guests are family members.');
+        }
+      }
+
+      // Re-read storage so a seat taken in another tab is not double-booked
+      allEvents = loadEvents();
+      const event = findEvent(selectedId);
+      const seats = 1 + (Number.isInteger(familyCount) && familyCount > 0 ? familyCount : 0);
+
+      if (!event) {
+        errors.push('Please choose a dinner first.');
+      } else if (isPast(event)) {
+        errors.push('This dinner has already taken place.');
+      } else if (event.filled >= event.capacity) {
+        errors.push('Sorry, this dinner just filled up. Please choose another dinner.');
+      } else if (event.filled + seats > event.capacity) {
+        const spotsLeft = event.capacity - event.filled;
+        const message = `Only ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left, so you can bring at most ${spotsLeft - 1} family member${spotsLeft - 1 === 1 ? '' : 's'}.`;
+        markInvalid('familyCount', 'familyCountError', message);
+        errors.push(message);
+      }
+
+      if (errors.length > 0) {
+        // Refresh seat counts in case another sign-up changed them
+        populateDinnerSelect();
+        selectDinner(selectedId);
+        showBannerErrors(errors);
+        return;
+      }
+
+      // Reserve the seat(s)
+      event.signups = event.signups || [];
+      event.signups.push({
+        name,
+        email,
+        seats,
+        family: seats > 1 ? familyNames : '',
+        diet: diet || 'None',
+        signedUpAt: new Date().toISOString()
+      });
+      event.filled += seats;
+      saveEvents();
+
+      showConfirmation(event, name, email, diet, seats, familyNames);
+      document.getElementById('signupForm').reset();
+      toggleFamilyFields();
+      populateDinnerSelect();
+      document.getElementById('dinnerSelect').value = String(event.id);
+      showToast('Success! Your seat is reserved.', 'success');
+    }
+
+    function showConfirmation(event, name, email, diet, seats, familyNames) {
+      const firstName = name.split(/\s+/)[0];
+      const subject = `You're confirmed: ${event.theme} on ${formatDate(event.dateTime)}`;
+      const body =
+`Hi ${firstName},
+
+${seats > 1 ? `Your ${seats} seats are` : 'Your seat is'} secured for this Darden Small Group Dinner:
+
+  Theme:     ${event.theme}
+  When:      ${formatDate(event.dateTime)}
+  Where:     ${event.location}
+  Seats:     ${seats}${seats > 1 ? ` (you + ${familyNames})` : ''}
+  Dietary restrictions: ${diet || 'None'}
+
+${event.filled} of ${event.capacity} seats are now filled. If plans change for this dinner, you can check its status in the app.
+
+See you there!
+Darden Small Group Dinners`;
+
+      document.getElementById('emailTo').textContent = email;
+      document.getElementById('emailSubject').textContent = subject;
+      document.getElementById('emailBody').textContent = body;
+      document.getElementById('mailtoLink').href =
+        `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+      // Refresh the left column's seat count, then swap the form for the confirmation
+      selectDinner(event.id);
+      document.getElementById('signupCard').classList.add('hidden');
+      document.getElementById('confirmationCard').classList.remove('hidden');
+    }
+
+    // Custom Toast Notification System (Replaces alert())
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto flex items-center justify-between p-3.5 rounded-lg shadow-lg text-xs font-medium border text-white transition-all transform duration-300 translate-y-2 opacity-0 ${
+        type === 'success' ? 'bg-emerald-600 border-emerald-500' :
+        type === 'error' ? 'bg-rose-600 border-rose-500' :
+        'bg-slate-800 border-slate-700'
+      }`;
+
+      toast.innerHTML = `
+        <div class="flex items-center space-x-2">
+          <span>${escapeHtml(message)}</span>
+        </div>
+        <button onclick="this.parentElement.remove()" class="ml-3 text-white/70 hover:text-white">✕</button>
+      `;
+
+      container.appendChild(toast);
+
+      // Animate In
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      // Auto dismiss
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Security HTML Escaper
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Initial render on boot: preselect the dinner passed as ?event=ID from the browse page
+    window.onload = function() {
+      populateDinnerSelect();
+      selectDinner(new URLSearchParams(window.location.search).get('event'));
+    };
+  </script>
+</body>
+</html>
