@@ -370,7 +370,7 @@
       container.innerHTML = matches.map(event => {
         const isFull = event.filled >= event.capacity;
         const spotsLeft = event.capacity - event.filled;
-        const formattedDate = new Date(event.dateTime).toLocaleString([], {
+        const formattedDate = new Date(event.dateTime).toLocaleString('en-US', {
           weekday: 'short',
           month: 'short',
           day: 'numeric',
