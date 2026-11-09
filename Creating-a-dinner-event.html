@@ -72,25 +72,21 @@
             <span class="bg-darden-orange text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PR Review Helper</span>
             <h2 class="text-sm font-semibold text-white">Automated Given-When-Then Scenario Tests</h2>
           </div>
-          <p class="text-xs text-slate-300 mt-1">Click any button to automatically populate inputs and test your 4 PR scenario acceptance criteria.</p>
+          <p class="text-xs text-slate-300 mt-1">Click any button to automatically populate inputs and test your 3 PR scenario acceptance criteria.</p>
         </div>
-        
+
         <div class="flex flex-wrap gap-2">
           <button onclick="runScenario(1)" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-600 text-slate-200 hover:text-white transition flex items-center">
             <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>
             Test 1: Success Creation
           </button>
           <button onclick="runScenario(2)" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-600 text-slate-200 hover:text-white transition flex items-center">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>
-            Test 2: Dietary Note
+            <span class="w-2 h-2 rounded-full bg-red-400 mr-1.5"></span>
+            Test 2: Missing Theme
           </button>
           <button onclick="runScenario(3)" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-600 text-slate-200 hover:text-white transition flex items-center">
             <span class="w-2 h-2 rounded-full bg-red-400 mr-1.5"></span>
-            Test 3: Missing Theme
-          </button>
-          <button onclick="runScenario(4)" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-600 text-slate-200 hover:text-white transition flex items-center">
-            <span class="w-2 h-2 rounded-full bg-red-400 mr-1.5"></span>
-            Test 4: Capacity &lt; 1
+            Test 3: Capacity &lt; 1
           </button>
         </div>
       </div>
@@ -173,18 +169,10 @@
             <p id="capacityError" class="hidden text-xs text-red-600 font-medium mt-1">Capacity must be at least 1 guest.</p>
           </div>
 
-          <!-- Dietary Restrictions -->
-          <div>
-            <label for="dietary" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Dietary Restrictions / Notes <span class="text-slate-400 font-normal">(Optional)</span>
-            </label>
-            <textarea 
-              id="dietary" 
-              rows="2"
-              placeholder="e.g. Vegetarian, Gluten-Free friendly, Halal options"
-              class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition"
-            ></textarea>
-          </div>
+          <!-- Dietary restrictions are collected from guests at sign-up, not from the host -->
+          <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+            You'll see each guest's dietary restrictions once they sign up, so you can plan the menu.
+          </p>
 
           <!-- Submit Button -->
           <div class="pt-2">
@@ -246,15 +234,11 @@
             </div>
             <div class="flex items-start space-x-1.5">
               <span class="text-emerald-600 font-bold">✓</span>
-              <span><strong>Scenario 2:</strong> Correctly saves and renders dietary notes.</span>
+              <span><strong>Scenario 2:</strong> Triggers "Discussion theme is required" error.</span>
             </div>
             <div class="flex items-start space-x-1.5">
               <span class="text-emerald-600 font-bold">✓</span>
-              <span><strong>Scenario 3:</strong> Triggers "Discussion theme is required" error.</span>
-            </div>
-            <div class="flex items-start space-x-1.5">
-              <span class="text-emerald-600 font-bold">✓</span>
-              <span><strong>Scenario 4:</strong> Triggers "Capacity must be at least 1 guest" error.</span>
+              <span><strong>Scenario 3:</strong> Triggers "Capacity must be at least 1 guest" error.</span>
             </div>
           </div>
         </div>
@@ -279,8 +263,7 @@
         dateTime: "2026-11-12T19:00",
         location: "Pavilion IX, West Lawn",
         capacity: 6,
-        filled: 4,
-        dietary: "Gluten-Free & Vegetarian friendly options"
+        filled: 4
       },
       {
         id: 102,
@@ -288,8 +271,7 @@
         dateTime: "2026-11-15T18:30",
         location: "Ivy Road Apartments Common Room",
         capacity: 5,
-        filled: 5,
-        dietary: "Nut allergy in group"
+        filled: 5
       }
     ];
 
@@ -310,7 +292,6 @@
       const dateInput = document.getElementById('dateTime');
       const locationInput = document.getElementById('location');
       const capacityInput = document.getElementById('capacity');
-      const dietaryInput = document.getElementById('dietary');
 
       const themeError = document.getElementById('themeError');
       const dateError = document.getElementById('dateError');
@@ -380,8 +361,7 @@
         dateTime: dateVal,
         location: locationVal,
         capacity: capacityVal,
-        filled: 0, // Starts at 0
-        dietary: dietaryInput.value.trim() || 'None specified'
+        filled: 0 // Starts at 0
       };
 
       hostedEvents.unshift(newEvent);
@@ -470,16 +450,6 @@
               </div>
             </div>
 
-            <!-- Dietary Notes Badge -->
-            ${event.dietary && event.dietary !== 'None specified' ? `
-              <div class="bg-amber-50 border border-amber-200/70 text-amber-900 rounded-lg p-2 text-xs flex items-start space-x-1.5">
-                <svg class="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <div>
-                  <strong class="font-semibold text-amber-800">Dietary Restrictions:</strong> ${escapeHtml(event.dietary)}
-                </div>
-              </div>
-            ` : ''}
-
             <!-- Simulation Action Buttons (Feature 4 for PR Testing) -->
             <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
               <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Simulate Registrations:</span>
@@ -539,7 +509,6 @@
       const dateInput = document.getElementById('dateTime');
       const locationInput = document.getElementById('location');
       const capacityInput = document.getElementById('capacity');
-      const dietaryInput = document.getElementById('dietary');
 
       // Reset form
       document.getElementById('createDinnerForm').reset();
@@ -550,30 +519,21 @@
         dateInput.value = "2026-11-20T18:00";
         locationInput.value = "Camp Library Room 102";
         capacityInput.value = "6";
-        dietaryInput.value = "";
         showToast("Loaded Scenario 1: Ready to submit valid dinner.", "info");
       } else if (num === 2) {
-        // Scenario 2: Dietary Note
-        themeInput.value = "International Student Connections";
-        dateInput.value = "2026-11-22T19:00";
-        locationInput.value = "North Grounds Apartment Clubhouse";
-        capacityInput.value = "4";
-        dietaryInput.value = "Vegetarian, Vegan & Halal food provided";
-        showToast("Loaded Scenario 2: Ready to test dietary notes.", "info");
-      } else if (num === 3) {
-        // Scenario 3: Missing Theme
+        // Scenario 2: Missing Theme
         themeInput.value = ""; // Empty theme intentionally
         dateInput.value = "2026-11-25T18:00";
         locationInput.value = "Pavilion VII";
         capacityInput.value = "5";
-        showToast("Loaded Scenario 3: Missing theme test.", "info");
-      } else if (num === 4) {
-        // Scenario 4: Capacity < 1
+        showToast("Loaded Scenario 2: Missing theme test.", "info");
+      } else if (num === 3) {
+        // Scenario 3: Capacity < 1
         themeInput.value = "Venturing & Startup Ideas";
         dateInput.value = "2026-11-26T18:00";
         locationInput.value = "iLab Conference Room";
         capacityInput.value = "0"; // Capacity 0 intentionally
-        showToast("Loaded Scenario 4: Capacity < 1 test.", "info");
+        showToast("Loaded Scenario 3: Capacity < 1 test.", "info");
       }
 
       // Highlight the submit button to signal user to click
