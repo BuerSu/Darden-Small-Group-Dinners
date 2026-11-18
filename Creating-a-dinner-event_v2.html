@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-white">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Darden Small Group Dinners - Host Portal</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Calibri-like system font per the product UI style guide -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Calibri', 'Carlito', 'Arial', 'sans-serif'],
+          },
+          colors: {
+            darden: {
+              orange: '#E57200',
+              navy: '#232D4B',
+              lightOrange: '#FFF4E6',
+              darkOrange: '#C45D00',
+              softNavy: '#354366'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Darden product charter, UI Design Style Guide (page 21): white, UVA orange/blue, Calibri-like font. */
+    body { background: #fff; color: #232D4B; }
+    h1,h2,h3,h4,legend { color: inherit; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #E57200; outline-offset: 1px; }
+    .darden-card { background: #fff; border: 1px solid #e2e5ec; border-radius: 14px; }
+    .darden-pill { border: 1px solid #e2e5ec; border-radius: 999px; background: white; }
+    #eventsContainer > div { border-radius: 16px; }
+  </style>
+</head>
+<body class="h-full bg-white text-darden-navy antialiased flex flex-col font-sans">
+
+  <!-- Main Navigation Header -->
+  <header class="bg-darden-navy text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 bg-darden-orange text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-sm">
+          D
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg leading-tight tracking-tight">Darden Small Group Dinners</h1>
+          <p class="text-xs text-slate-300 font-light">Host Management Portal</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-3">
+        <span class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-500/20 text-orange-200 border border-orange-500/30">
+          <span class="w-1.5 h-1.5 rounded-full bg-orange-400 mr-1.5 animate-pulse"></span>
+          Host View
+        </span>
+        <button onclick="resetToDefaults()" class="text-xs text-slate-300 hover:text-white underline px-2 py-1 transition">
+          Reset Demo Data
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Banner Container -->
+  <div id="toastContainer" class="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full"></div>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+    
+    <!-- Quick Scenario Test Runner Bar (Helps user/reviewer run Part A Given-When-Then scenarios) -->
+    <div class="bg-darden-navy rounded-xl p-4 text-white shadow-sm border border-slate-700/50">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="bg-darden-orange text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PR Review Helper</span>
+            <h2 class="text-sm font-semibold text-white">Automated Given-When-Then Scenario Tests</h2>
+          </div>
+          <p class="text-xs text-slate-300 mt-1">Click any button to automatically populate inputs and test your 4 PR scenario acceptance criteria.</p>
+        </div>
+        
+        <div class="flex flex-wrap gap-2">
+          <button onclick="runScenario(1)" class="bg-white/10 hover:bg-white/20 text-xs px-3 py-1.5 rounded-lg border border-white/30 text-white hover:text-white transition flex items-center">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>
+            Test 1: Success Creation
+          </button>
+          <button onclick="runScenario(2)" class="bg-white/10 hover:bg-white/20 text-xs px-3 py-1.5 rounded-lg border border-white/30 text-white hover:text-white transition flex items-center">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>
+            Test 2: Topic Selection
+          </button>
+          <button onclick="runScenario(3)" class="bg-white/10 hover:bg-white/20 text-xs px-3 py-1.5 rounded-lg border border-white/30 text-white hover:text-white transition flex items-center">
+            <span class="w-2 h-2 rounded-full bg-red-400 mr-1.5"></span>
+            Test 3: Missing Theme
+          </button>
+          <button onclick="runScenario(4)" class="bg-white/10 hover:bg-white/20 text-xs px-3 py-1.5 rounded-lg border border-white/30 text-white hover:text-white transition flex items-center">
+            <span class="w-2 h-2 rounded-full bg-red-400 mr-1.5"></span>
+            Test 4: Capacity &lt; 3
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2-Column Responsive Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- COLUMN 1: Story 1 - Create Dinner Form -->
+      <section class="lg:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="bg-white p-4 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <svg class="w-5 h-5 text-darden-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 class="font-bold text-slate-800 text-base">Host a Dinner Event</h2>
+          </div>
+        </div>
+
+        <form id="createDinnerForm" onsubmit="handleFormSubmit(event)" novalidate class="p-5 space-y-4">
+          
+          <!-- Banner Error Box -->
+          <div id="bannerError" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 flex items-start space-x-2">
+            <svg class="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div id="bannerErrorContent"></div>
+          </div>
+
+          <div>
+            <label for="category" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Topic Category <span class="text-red-500">*</span></label>
+            <select id="category" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 bg-white">
+              <option value="">Select a general topic...</option>
+              <option>Career &amp; Professional Life</option><option>Darden &amp; MBA Life</option>
+              <option>Ideas, Books &amp; Current Events</option><option>Culture &amp; Global Perspectives</option>
+              <option>Interests, Life &amp; Connection</option><option>Others</option>
+            </select>
+            <p id="categoryError" class="hidden text-xs text-red-600 mt-1">Please choose a topic category.</p>
+          </div>
+          <div>
+            <label for="theme" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Specific Dinner Title / Theme <span class="text-red-500">*</span></label>
+            <input id="theme" type="text" maxlength="120" placeholder="e.g. Breaking into Tech Strategy" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" />
+            <p id="themeError" class="hidden text-xs text-red-600 mt-1">Discussion theme is required.</p>
+          </div>
+          <div>
+            <label for="dateTime" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Date &amp; Time <span class="text-red-500">*</span></label>
+            <input type="datetime-local" id="dateTime" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" />
+            <p class="text-xs text-slate-500 mt-1">Eastern Time (America/New_York: EST in winter, EDT in summer). Only future dates and times are allowed.</p>
+            <p id="dateError" class="hidden text-xs text-red-600 mt-1">Choose a future date and time in Eastern Time.</p>
+          </div>
+          <fieldset class="space-y-3 border border-slate-200 rounded-lg p-3">
+            <legend class="text-xs font-semibold text-slate-700 uppercase tracking-wider px-1">Full Event Address <span class="text-red-500">*</span></legend>
+            <p class="text-xs text-slate-500">The exact street address is private to the host and confirmed attendees. Other visitors see only the city and ZIP code.</p>
+            <div><label for="address1" class="text-xs font-medium">Street address</label><input id="address1" autocomplete="address-line1" placeholder="Street number and name" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
+            <div><label for="address2" class="text-xs font-medium">Apartment / suite / building (optional)</label><input id="address2" autocomplete="address-line2" placeholder="Unit or room" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
+            <div class="grid grid-cols-2 gap-3">
+              <div><label for="city" class="text-xs font-medium">City</label><input id="city" autocomplete="address-level2" placeholder="Charlottesville" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
+              <div><label for="state" class="text-xs font-medium">State</label><input id="state" autocomplete="address-level1" value="VA" maxlength="2" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
+              <div><label for="zip" class="text-xs font-medium">ZIP code</label><input id="zip" autocomplete="postal-code" inputmode="numeric" placeholder="22903" maxlength="10" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
+              <div><label for="country" class="text-xs font-medium">Country</label><input id="country" value="USA" readonly class="w-full text-sm rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" /></div>
+            </div>
+            <p id="locationError" class="hidden text-xs text-red-600">Street, city, two-letter state, and valid ZIP code are required.</p>
+            <p class="text-xs text-slate-500">Public location: city, state, and ZIP code only. No map service is required.</p>
+          </fieldset>
+          <div>
+            <label for="capacity" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Number of Spots (Capacity) <span class="text-red-500">*</span></label>
+            <input type="number" id="capacity" min="3" step="1" placeholder="e.g. 6" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" />
+            <p id="capacityError" class="hidden text-xs text-red-600 mt-1">Capacity must be a whole number of at least 3 guests.</p>
+          </div>
+          <div>
+            <label for="poster" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Event Picture / Poster (Optional)</label>
+            <input id="poster" type="file" accept="image/png,image/jpeg,image/webp" class="block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-orange-50 file:px-3 file:py-2 file:text-darden-darkOrange" />
+            <p class="text-xs text-slate-500 mt-1">JPG, PNG or WebP, maximum 2 MB. Stored only in this browser demo session.</p>
+            <p id="posterError" class="hidden text-xs text-red-600 mt-1">Choose a JPG, PNG or WebP under 2 MB.</p>
+            <img id="posterPreview" alt="Selected event poster preview" class="hidden mt-2 w-full max-h-48 object-contain rounded-lg border border-slate-200" />
+          </div>
+
+          <!-- Submit Button -->
+          <div class="pt-2">
+            <button 
+              type="submit" 
+              class="w-full bg-darden-orange hover:bg-darden-darkOrange text-white font-semibold py-2.5 px-4 rounded-lg shadow-sm transition duration-150 flex items-center justify-center space-x-2 text-sm"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              <span>Publish Dinner Event</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- COLUMN 2: Story 2 - Host Event Status Dashboard -->
+      <section class="lg:col-span-7 space-y-4">
+        
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          
+          <!-- Section Header & Filter -->
+          <div class="bg-white p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5 text-darden-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <h2 class="font-bold text-slate-800 text-base">Hosted Dinners Status Dashboard</h2>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">User Story 2: Track participant sign-ups in real time</p>
+            </div>
+
+            <!-- Quick Filter Bar -->
+            <div class="flex items-center space-x-2">
+              <input 
+                type="text" 
+                id="searchFilter" 
+                oninput="renderEvents()" 
+                placeholder="Search dinners by theme or area..." 
+                class="text-xs darden-pill border border-slate-300 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-darden-orange w-52 sm:w-64"
+              />
+            </div>
+          </div>
+
+          <!-- Browse-style dinner cards: clean white surfaces and rounded search control, inspired by the reference layout on page 22. -->
+          <!-- Dynamic Events Container -->
+          <div id="eventsContainer" class="p-5 space-y-4">
+            <!-- Rendered via JS -->
+          </div>
+
+        </div>
+
+        <!-- Acceptance Criteria Checklist Legend -->
+        <div class="bg-white rounded-lg p-4 border border-slate-200 text-xs text-slate-600">
+          <h4 class="font-semibold text-slate-800 mb-2 flex items-center">
+            <svg class="w-4 h-4 text-emerald-600 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            PR Verification Criteria Matrix
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div class="flex items-start space-x-1.5">
+              <span class="text-emerald-600 font-bold">✓</span>
+              <span><strong>Scenario 1:</strong> Creates dinner & sets initial counter (0 / N filled).</span>
+            </div>
+            <div class="flex items-start space-x-1.5">
+              <span class="text-emerald-600 font-bold">✓</span>
+              <span><strong>Scenario 2:</strong> Saves selected topic and supports an optional poster.</span>
+            </div>
+            <div class="flex items-start space-x-1.5">
+              <span class="text-emerald-600 font-bold">✓</span>
+              <span><strong>Scenario 3:</strong> Triggers "Discussion theme is required" error.</span>
+            </div>
+            <div class="flex items-start space-x-1.5">
+              <span class="text-emerald-600 font-bold">✓</span>
+              <span><strong>Scenario 4:</strong> Rejects capacity below 3 guests.</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-500">
+    <p>Darden School of Business — Small Group Dinner Platform Assignment Demo</p>
+  </footer>
+
+  <!-- Application Logic -->
+  <script>
+    const TIME_ZONE = 'America/New_York';
+    const defaultEvents = [];
+    let hostedEvents = [];
+    let nextId = 1;
+    const $ = id => document.getElementById(id);
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    // Convert an Eastern local wall-clock time to a UTC instant, including DST.
+    function easternParts(date) {
+      const parts = new Intl.DateTimeFormat('en-US', {timeZone: TIME_ZONE, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).formatToParts(date);
+      return Object.fromEntries(parts.filter(p => p.type !== 'literal').map(p => [p.type, Number(p.value)]));
+    }
+    function easternInput(date) {
+      const p = easternParts(date);
+      return `${p.year}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}T${String(p.hour).padStart(2,'0')}:${String(p.minute).padStart(2,'0')}`;
+    }
+    function easternToUTC(input) {
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(input)) return null;
+      const [year,month,day,hour,minute] = input.match(/\d+/g).map(Number);
+      const guess = Date.UTC(year,month-1,day,hour,minute);
+      const matches = [];
+      // Check both DST offsets: reject nonexistent spring-forward times.
+      for (const offset of [4,5]) {
+        const date = new Date(guess + offset*3600000);
+        if (easternInput(date) === input) matches.push(date);
+      }
+      return matches.length ? matches[0] : null;
+    }
+    function refreshDateMin() { $('dateTime').min = easternInput(new Date(Date.now()+60000)); }
+    function publicArea(e) { return [e.city, e.state, e.zip].filter(Boolean).join(', '); }
+    function resetToDefaults() {
+      hostedEvents = structuredClone(defaultEvents);
+      $('searchFilter').value = '';
+      $('createDinnerForm').reset(); $('posterPreview').classList.add('hidden');
+      clearErrors(); refreshDateMin(); renderEvents();
+      showToast('Demo events cleared.', 'info');
+    }
+    function clearErrors() {
+      for (const id of ['category','theme','dateTime','address1','city','state','zip','capacity','poster']) $(id).classList.remove('border-red-500');
+      for (const id of ['categoryError','themeError','dateError','locationError','capacityError','posterError','bannerError']) $(id).classList.add('hidden');
+    }
+    function markError(field, error, message, errors) {
+      $(field).classList.add('border-red-500'); $(error).classList.remove('hidden'); errors.push(message);
+    }
+    function handleFormSubmit(event) {
+      event.preventDefault(); clearErrors();
+      const errors=[];
+      const category=$('category').value, theme=$('theme').value.trim();
+      const dateTime=$('dateTime').value, utc=easternToUTC(dateTime);
+      const address1=$('address1').value.trim(), address2=$('address2').value.trim();
+      const city=$('city').value.trim(), state=$('state').value.trim().toUpperCase(), zip=$('zip').value.trim();
+      const capacity=Number($('capacity').value), poster=$('poster').files[0];
+      if (!category) markError('category','categoryError','Topic category is required.',errors);
+      if (!theme) markError('theme','themeError','Discussion theme is required.',errors);
+      if (!utc || utc.getTime()<=Date.now()) markError('dateTime','dateError','Choose a future valid Eastern Time date.',errors);
+      if (!address1 || !city || !/^[A-Z]{2}$/.test(state) || !/^\d{5}(-\d{4})?$/.test(zip)) markError('address1','locationError','Complete street, city, state and ZIP.',errors);
+      if (!$('capacity').value || !Number.isInteger(capacity) || capacity<3) markError('capacity','capacityError','Capacity must be at least 3 guests.',errors);
+      if (poster && (!['image/png','image/jpeg','image/webp'].includes(poster.type) || poster.size>2*1024*1024)) markError('poster','posterError','Poster must be JPG, PNG or WebP under 2 MB.',errors);
+      if (errors.length) {
+        $('bannerErrorContent').textContent = 'Please fix: '+errors.join(' ');
+        $('bannerError').classList.remove('hidden'); showToast('Please fix the highlighted fields.','error'); return;
+      }
+      const save = poster ? new Promise((resolve,reject) => {
+        const reader=new FileReader(); reader.onload=()=>resolve(reader.result); reader.onerror=()=>reject(new Error('Unable to read poster')); reader.readAsDataURL(poster);
+      }) : Promise.resolve(null);
+      save.then(posterData => {
+        hostedEvents.unshift({id:nextId++,category,theme,dateTime,dateUTC:utc.toISOString(),address1,address2,city,state,zip,country:'USA',capacity,filled:0,posterData});
+        $('createDinnerForm').reset(); $('posterPreview').classList.add('hidden');
+        refreshDateMin(); renderEvents();
+        showToast('Dinner published! Exact address is private to registered guests.','success');
+      }).catch(()=>showToast('Could not read the poster. Please try another image.','error'));
+    }
+    function renderEvents() {
+      const filter=$('searchFilter').value.toLowerCase();
+      const events=hostedEvents.filter(e=>[e.theme,e.category,e.city].some(v=>v.toLowerCase().includes(filter)));
+      if (!events.length) { $('eventsContainer').innerHTML='<p class="text-sm text-slate-500 text-center py-8">No hosted dinners found. Create an event using the form.</p>'; return; }
+      $('eventsContainer').innerHTML=events.map(e=>{
+        const full=e.filled>=e.capacity, pct=Math.round(e.filled/e.capacity*100);
+        const date=new Date(e.dateUTC).toLocaleString('en-US',{timeZone:TIME_ZONE,year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
+        return `<article class="border border-slate-200 rounded-xl p-4 bg-white space-y-3">
+          ${e.posterData?`<img src="${e.posterData}" alt="Event poster" class="w-full max-h-52 object-contain rounded-lg bg-slate-50">`:''}
+          <div class="flex justify-between gap-3"><div><span class="text-xs font-semibold text-darden-orange">${escapeHtml(e.category)}</span><h3 class="font-bold text-slate-900">${escapeHtml(e.theme)}</h3><p class="text-xs text-slate-500 mt-1">${escapeHtml(date)} · ${escapeHtml(publicArea(e))}</p></div><span class="text-xs font-bold whitespace-nowrap ${full?'text-rose-700':'text-emerald-700'}">${e.filled} / ${e.capacity} filled</span></div>
+          <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden"><div class="h-full bg-darden-orange" style="width:${pct}%"></div></div>
+          <div class="text-xs bg-slate-50 rounded-lg p-3"><strong>Public location:</strong> ${escapeHtml(publicArea(e))}<br><span class="text-slate-500">Exact address hidden from non-registered visitors.</span></div>
+          <details class="text-xs border border-slate-200 rounded-lg p-3"><summary class="font-semibold cursor-pointer">Host-only: full event address</summary><p class="mt-2">${escapeHtml([e.address1,e.address2,e.city,e.state,e.zip,e.country].filter(Boolean).join(', '))}</p><p class="text-slate-500 mt-1">In production, server-side authorization must restrict this information to the host and registered attendees.</p></details>
+          <div class="pt-2 border-t border-slate-100 flex justify-between items-center"><span class="text-xs text-slate-500">Demo sign-ups</span><div class="flex gap-2"><button onclick="changeCapacity(${e.id},-1)" ${e.filled===0?'disabled':''} class="px-2 py-1 bg-slate-100 rounded text-xs disabled:opacity-30">− Cancel</button><button onclick="changeCapacity(${e.id},1)" ${full?'disabled':''} class="px-2 py-1 bg-darden-navy text-white rounded text-xs disabled:opacity-30">+ Register</button><button onclick="deleteEvent(${e.id})" class="px-2 py-1 text-rose-700 text-xs">Delete</button></div></div>
+        </article>`;
+      }).join('');
+    }
+    function changeCapacity(id,delta) {
+      const e=hostedEvents.find(e=>e.id===id); if (!e) return;
+      const count=e.filled+delta; if (count<0 || count>e.capacity) return;
+      e.filled=count; renderEvents(); showToast('Demo registration count updated.','info');
+    }
+    function deleteEvent(id) { hostedEvents=hostedEvents.filter(e=>e.id!==id); renderEvents(); showToast('Event removed.','info'); }
+    function runScenario(num) {
+      $('createDinnerForm').reset(); clearErrors();
+      $('category').value=num===2?'Culture & Global Perspectives':'Career & Professional Life';
+      $('theme').value=num===3?'':num===2?'International Student Connections':'Consulting Case Interview Practice';
+      const tomorrow=new Date(Date.now()+48*3600000);
+      $('dateTime').value=easternInput(tomorrow);
+      $('address1').value='100 Darden Blvd'; $('city').value='Charlottesville'; $('state').value='VA'; $('zip').value='22903';
+      $('capacity').value=num===4?'2':'6';
+      $('poster').value=''; $('posterPreview').classList.add('hidden');
+      showToast(`Scenario ${num} loaded. Click Publish Dinner Event to test.`, 'info');
+    }
+    $('poster').addEventListener('change',()=>{
+      const file=$('poster').files[0], img=$('posterPreview');
+      img.classList.add('hidden');
+      if (!file || !['image/png','image/jpeg','image/webp'].includes(file.type) || file.size>2*1024*1024) return;
+      const reader=new FileReader(); reader.onload=()=>{img.src=reader.result;img.classList.remove('hidden')};reader.readAsDataURL(file);
+    });
+    refreshDateMin(); renderEvents();
+    // Custom Toast Notification System (Replaces alert())
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto flex items-center justify-between p-3.5 rounded-lg shadow-lg text-xs font-medium border text-white transition-all transform duration-300 translate-y-2 opacity-0 ${
+        type === 'success' ? 'bg-emerald-600 border-emerald-500' :
+        type === 'error' ? 'bg-rose-600 border-rose-500' :
+        'bg-slate-800 border-slate-700'
+      }`;
+
+      toast.innerHTML = `
+        <div class="flex items-center space-x-2">
+          <span>${escapeHtml(message)}</span>
+        </div>
+        <button onclick="this.parentElement.remove()" class="ml-3 text-white/70 hover:text-white">✕</button>
+      `;
+
+      container.appendChild(toast);
+
+      // Animate In
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      // Auto dismiss
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+  </script>
+</body>
+</html>
