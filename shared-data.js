@@ -137,10 +137,12 @@ function requireLogin() {
 
 // ---------- Dinners ----------
 //
-// Event shape: { id, theme, dateTime, location, capacity, filled, hostEmail, signups }
+// Event shape: { id, theme, dateTime, location, capacity, filled, hostEmail, signups, cancelled }
 // signups: [{ name, email, seats, family, diet, signedUpAt }]
+// cancelled is only set (to true) once the host cancels the dinner.
 
-const EVENTS_KEY = 'darden-sgd-events-v2';
+// v3 adds upcoming sample dinners for demo.host (host dashboard)
+const EVENTS_KEY = 'darden-sgd-events-v3';
 
 // Demo accounts so reviewers can test the hosting rule (password: dinner123).
 // demo.guest has attended 3 dinners and hosted none, so is at the limit.
@@ -162,8 +164,8 @@ const demoAccounts = [
   }
 ];
 
-function demoSignup(name, email) {
-  return { name, email, seats: 1, family: '', diet: 'None', signedUpAt: '2026-10-15T12:00:00.000Z' };
+function demoSignup(name, email, diet = 'None', family = '', seats = 1) {
+  return { name, email, seats, family, diet, signedUpAt: '2026-10-15T12:00:00.000Z' };
 }
 
 const defaultEvents = [
@@ -242,6 +244,33 @@ const defaultEvents = [
     filled: 0,
     hostEmail: "classmate.c@darden.virginia.edu",
     signups: []
+  },
+  // Upcoming dinners hosted by demo.host, for the host dashboard
+  {
+    id: 107,
+    theme: "Books That Changed How I Lead",
+    dateTime: "2027-01-14T19:00",
+    location: "Pavilion IX, West Lawn",
+    capacity: 6,
+    filled: 4,
+    hostEmail: "demo.host@darden.virginia.edu",
+    signups: [
+      demoSignup('Classmate A', 'classmate.a@darden.virginia.edu', 'Vegetarian'),
+      demoSignup('Classmate B', 'classmate.b@darden.virginia.edu', 'Nut allergy', 'Jamie (partner)', 2),
+      demoSignup('Classmate C', 'classmate.c@darden.virginia.edu')
+    ]
+  },
+  {
+    id: 108,
+    theme: "Life After Darden: Moving Cities",
+    dateTime: "2027-01-28T18:30",
+    location: "Ivy Road Apartments Common Room",
+    capacity: 5,
+    filled: 1,
+    hostEmail: "demo.host@darden.virginia.edu",
+    signups: [
+      demoSignup('Classmate D', 'classmate.d@darden.virginia.edu', 'Gluten-free')
+    ]
   }
 ];
 
@@ -277,9 +306,11 @@ ensureDemoAccounts();
 const FREE_DINNERS = 3;
 const DINNERS_PER_HOSTED = 3;
 
-function dinnerAllowance(email, events = loadEvents()) {
+function dinnerAllowance(email, allEvents = loadEvents()) {
   const me = normalizeEmail(email);
   const now = new Date();
+  // Cancelled dinners never took place, so they count neither way
+  const events = allEvents.filter(e => !e.cancelled);
   const attended = events.filter(e => (e.signups || []).some(s => normalizeEmail(s.email) === me)).length;
   const hostedHeld = events.filter(e => normalizeEmail(e.hostEmail) === me && new Date(e.dateTime) <= now).length;
   const allowed = FREE_DINNERS + DINNERS_PER_HOSTED * hostedHeld;

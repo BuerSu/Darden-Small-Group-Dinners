@@ -292,7 +292,8 @@
     }
 
     function findEvent(id) {
-      return allEvents.find(e => String(e.id) === String(id));
+      // Cancelled dinners are treated as removed by the host
+      return allEvents.find(e => String(e.id) === String(id) && !e.cancelled);
     }
 
     function isPast(event) {
@@ -314,7 +315,7 @@
     function populateDinnerSelect() {
       const select = document.getElementById('dinnerSelect');
       const upcoming = allEvents
-        .filter(e => !isPast(e))
+        .filter(e => !isPast(e) && !e.cancelled)
         .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
 
       select.innerHTML = `<option value="">Select a dinner…</option>` + upcoming.map(e => {

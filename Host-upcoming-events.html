@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-white">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Darden Small Group Dinners - My Upcoming Dinners</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Style guide: UVA Orange and UVA Blue on a white background, Calibri font
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Calibri', 'Carlito', '"Segoe UI"', 'Arial', 'sans-serif'],
+          },
+          colors: {
+            darden: {
+              orange: '#E57200',
+              navy: '#232D4B',
+              lightOrange: '#FFF4E6',
+              darkOrange: '#C45D00',
+              softNavy: '#3A4668'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="shared-data.js"></script>
+</head>
+<body class="h-full bg-white text-darden-navy antialiased flex flex-col font-sans">
+
+  <!-- Main Navigation Header -->
+  <header class="bg-darden-navy text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 bg-darden-orange text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-sm">
+          D
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg leading-tight tracking-tight">Darden Small Group Dinners</h1>
+          <p class="text-xs text-slate-300">My Upcoming Dinners</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <span id="currentUserLabel" class="hidden sm:inline text-xs text-slate-300"></span>
+        <a href="Creating-a-dinner-event.html" class="hidden sm:inline text-xs text-slate-300 hover:text-white underline px-2 py-1 transition">
+          Host a Dinner
+        </a>
+        <button onclick="handleLogOut()" class="text-xs text-slate-300 hover:text-white underline px-2 py-1 transition">
+          Log Out
+        </button>
+        <button onclick="resetToDefaults()" class="text-xs text-slate-300 hover:text-white underline px-2 py-1 transition">
+          Reset Demo Data
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Banner Container -->
+  <div id="toastContainer" class="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full"></div>
+
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- OVERVIEW: one row per upcoming dinner this student is hosting -->
+    <section id="overviewView" class="space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+        <div>
+          <h2 class="text-2xl font-bold text-darden-navy">My Upcoming Dinners</h2>
+          <p class="text-sm text-slate-500 mt-0.5">Track how your dinners are filling up. Click a dinner to see guests and dietary needs.</p>
+        </div>
+        <a href="Creating-a-dinner-event.html" class="inline-flex items-center justify-center bg-darden-orange hover:bg-darden-darkOrange text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition text-sm">
+          + Host a New Dinner
+        </a>
+      </div>
+
+      <!-- Summary Tiles -->
+      <div id="summaryTiles" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
+
+      <!-- Dinner List -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="hidden sm:grid grid-cols-12 gap-3 px-5 py-2.5 bg-slate-50 border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          <span class="col-span-5">Dinner</span>
+          <span class="col-span-3">Date &amp; Time</span>
+          <span class="col-span-2">Signed Up</span>
+          <span class="col-span-2 text-right">Status</span>
+        </div>
+        <div id="eventsList" class="divide-y divide-slate-100"></div>
+      </div>
+    </section>
+
+    <!-- DETAIL: one dinner, with guests, dietary restrictions, update and cancel -->
+    <section id="detailView" class="hidden space-y-5">
+      <button onclick="showOverview()" class="text-sm text-darden-navy hover:text-darden-orange font-semibold transition flex items-center">
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        Back to My Upcoming Dinners
+      </button>
+      <div id="detailContent"></div>
+    </section>
+
+  </main>
+
+  <!-- Cancel Confirmation Dialog -->
+  <dialog id="cancelDialog" class="rounded-xl p-0 max-w-md w-[calc(100%-2rem)] shadow-xl backdrop:bg-darden-navy/60">
+    <div class="p-6 space-y-3 text-darden-navy font-sans">
+      <h3 class="text-lg font-bold">Cancel this dinner?</h3>
+      <p id="cancelDialogText" class="text-sm text-slate-600"></p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="document.getElementById('cancelDialog').close()" class="px-4 py-2 text-sm font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-darden-navy transition">
+          Keep Dinner
+        </button>
+        <button onclick="confirmCancel()" class="px-4 py-2 text-sm font-semibold rounded-lg bg-red-700 hover:bg-red-800 text-white transition">
+          Yes, Cancel Dinner
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-500">
+    <p>Darden School of Business — Small Group Dinner Platform Assignment Demo</p>
+  </footer>
+
+  <!-- Application Logic -->
+  <script>
+    // Dinners come from shared-data.js. This page only lists dinners hosted by
+    // the logged-in student that haven't happened yet and weren't cancelled.
+    const MIN_GUESTS = 3; // A dinner goes ahead once at least 3 seats are taken
+    const user = requireLogin();
+    let allEvents = loadEvents();
+    let openEventId = null;
+
+    function isMine(event) {
+      return user && normalizeEmail(event.hostEmail) === user.email;
+    }
+
+    function upcomingHostedEvents() {
+      const now = new Date();
+      return allEvents
+        .filter(e => isMine(e) && !e.cancelled && new Date(e.dateTime) > now)
+        .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+    }
+
+    function findMyUpcomingEvent(id) {
+      return upcomingHostedEvents().find(e => String(e.id) === String(id)) || null;
+    }
+
+    // Always US English so dates read the same on every machine
+    function formatDate(dateTime) {
+      return new Date(dateTime).toLocaleString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+
+    function formatTime(dateTime) {
+      return new Date(dateTime).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function statusOf(event) {
+      if (event.filled >= event.capacity) {
+        return { label: 'Full', classes: 'bg-darden-navy text-white border-darden-navy' };
+      }
+      if (event.filled >= MIN_GUESTS) {
+        return { label: 'Confirmed', classes: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
+      }
+      const needed = MIN_GUESTS - event.filled;
+      return { label: `Needs ${needed} more`, classes: 'bg-darden-lightOrange text-darden-darkOrange border-orange-200' };
+    }
+
+    // ---------- Guest privacy ----------
+    //
+    // Hosts never see guests' real names. Each guest gets a nickname and avatar
+    // worked out from their email, so the same guest looks the same everywhere.
+
+    const NICK_ADJECTIVES = ['Curious', 'Cheerful', 'Thoughtful', 'Bold', 'Witty', 'Gentle', 'Lively', 'Clever', 'Friendly', 'Brave', 'Calm', 'Sunny'];
+    const NICK_ANIMALS = [
+      ['Otter', '🦦'], ['Fox', '🦊'], ['Owl', '🦉'], ['Panda', '🐼'], ['Koala', '🐨'], ['Penguin', '🐧'],
+      ['Tiger', '🐯'], ['Rabbit', '🐰'], ['Hedgehog', '🦔'], ['Dolphin', '🐬'], ['Turtle', '🐢'], ['Bee', '🐝']
+    ];
+
+    function guestAlias(email) {
+      let hash = 0;
+      for (const ch of normalizeEmail(email)) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+      const adjective = NICK_ADJECTIVES[hash % NICK_ADJECTIVES.length];
+      const [animal, emoji] = NICK_ANIMALS[Math.floor(hash / NICK_ADJECTIVES.length) % NICK_ANIMALS.length];
+      return { nickname: `${adjective} ${animal}`, emoji };
+    }
+
+    // ---------- Overview ----------
+
+    function renderOverview() {
+      const events = upcomingHostedEvents();
+      const totalSeats = events.reduce((sum, e) => sum + e.filled, 0);
+      const needGuests = events.filter(e => e.filled < MIN_GUESTS).length;
+
+      document.getElementById('summaryTiles').innerHTML = [
+        { label: 'Upcoming Dinners', value: events.length },
+        { label: 'Seats Signed Up', value: totalSeats },
+        { label: 'Need More Guests', value: needGuests }
+      ].map(t => `
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">${t.label}</p>
+          <p class="text-3xl font-bold text-darden-orange mt-1">${t.value}</p>
+        </div>
+      `).join('');
+
+      const list = document.getElementById('eventsList');
+      if (events.length === 0) {
+        list.innerHTML = `
+          <div class="text-center py-12 px-4">
+            <p class="text-base font-semibold text-darden-navy">You have no upcoming dinners</p>
+            <p class="text-sm text-slate-500 mt-1">Dinners you host will show up here.
+              <a href="Creating-a-dinner-event.html" class="text-darden-orange font-semibold underline">Host a dinner</a>
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      // Overview shows only title, date/time and sign-ups (no dietary details)
+      list.innerHTML = events.map(event => {
+        const status = statusOf(event);
+        const percentage = Math.min(100, Math.round((event.filled / event.capacity) * 100));
+        return `
+          <button onclick="openEvent(${event.id})" class="w-full text-left px-5 py-4 hover:bg-darden-lightOrange/60 focus:bg-darden-lightOrange/60 focus:outline-none transition grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-3 sm:items-center">
+            <span class="sm:col-span-5 font-bold text-darden-navy text-base leading-snug">${escapeHtml(event.theme)}</span>
+            <span class="sm:col-span-3 text-sm text-slate-600">
+              ${formatDate(event.dateTime)}<span class="text-slate-400"> · </span>${formatTime(event.dateTime)}
+            </span>
+            <span class="sm:col-span-2">
+              <span class="text-sm font-semibold text-darden-navy">${event.filled} / ${event.capacity}</span>
+              <span class="block w-full max-w-[8rem] bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden">
+                <span class="block h-full bg-darden-orange" style="width: ${percentage}%"></span>
+              </span>
+            </span>
+            <span class="sm:col-span-2 sm:text-right">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${status.classes}">${status.label}</span>
+            </span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    // ---------- Detail ----------
+
+    function openEvent(id) {
+      const event = findMyUpcomingEvent(id);
+      if (!event) {
+        showToast('That dinner is no longer on your upcoming list.', 'error');
+        showOverview();
+        return;
+      }
+      openEventId = event.id;
+      history.replaceState(null, '', `?event=${event.id}`);
+      document.getElementById('overviewView').classList.add('hidden');
+      document.getElementById('detailView').classList.remove('hidden');
+      renderDetail(event);
+      window.scrollTo(0, 0);
+    }
+
+    function showOverview() {
+      openEventId = null;
+      history.replaceState(null, '', window.location.pathname);
+      document.getElementById('detailView').classList.add('hidden');
+      document.getElementById('overviewView').classList.remove('hidden');
+      renderOverview();
+    }
+
+    function renderDetail(event, editing = false) {
+      const status = statusOf(event);
+      const signups = event.signups || [];
+      const listedSeats = signups.reduce((sum, s) => sum + (s.seats || 1), 0);
+      const unlistedSeats = Math.max(0, event.filled - listedSeats);
+      const diets = [...new Set(signups.map(s => s.diet).filter(d => d && d !== 'None'))];
+
+      const roster = signups.length === 0
+        ? `<p class="text-sm text-slate-500 italic py-2">No one has signed up yet.</p>`
+        : signups.map(s => {
+            const alias = guestAlias(s.email);
+            const familyCount = (s.seats || 1) - 1;
+            return `
+              <div class="flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-200">
+                <div class="flex items-center gap-3 min-w-0">
+                  <span class="w-10 h-10 flex-shrink-0 rounded-full bg-darden-lightOrange border border-orange-200 flex items-center justify-center text-xl" aria-hidden="true">${alias.emoji}</span>
+                  <div class="min-w-0">
+                    <p class="font-semibold text-darden-navy">${alias.nickname}</p>
+                    <p class="text-xs text-slate-500">${familyCount > 0 ? `+ ${familyCount} family member${familyCount === 1 ? '' : 's'}` : 'Coming alone'}</p>
+                  </div>
+                </div>
+                <span class="text-xs text-darden-navy bg-white px-2 py-1 rounded border border-slate-200 text-right">Diet: ${escapeHtml(s.diet || 'None')}</span>
+              </div>
+            `;
+          }).join('');
+
+      document.getElementById('detailContent').innerHTML = `
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-darden-orange">Hosted Dinner</span>
+              <h2 class="text-2xl font-bold text-darden-navy mt-1">${escapeHtml(event.theme)}</h2>
+              <p class="text-sm text-slate-600 mt-1">${formatDate(event.dateTime)} · ${formatTime(event.dateTime)}</p>
+              <p class="text-sm text-slate-600">${escapeHtml(event.location)}</p>
+            </div>
+            <span class="self-start inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${status.classes}">${status.label}</span>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-sm font-semibold">
+              <span>Signed up</span>
+              <span class="text-darden-orange">${event.filled} / ${event.capacity} seats</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2.5 mt-1 overflow-hidden">
+              <div class="h-full bg-darden-orange" style="width: ${Math.min(100, Math.round((event.filled / event.capacity) * 100))}%"></div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button onclick="toggleEdit(true)" class="px-4 py-2 text-sm font-semibold rounded-lg bg-darden-navy hover:bg-darden-softNavy text-white transition">
+              Update Dinner
+            </button>
+            <button onclick="askCancel()" class="px-4 py-2 text-sm font-semibold rounded-lg bg-white border border-red-300 text-red-700 hover:bg-red-50 transition">
+              Cancel Dinner
+            </button>
+          </div>
+
+          ${editing ? editForm(event) : ''}
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-3">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+            <h3 class="font-bold text-darden-navy text-lg">Guests &amp; Dietary Restrictions</h3>
+            <span class="text-xs text-slate-500">${signups.length} sign-up${signups.length === 1 ? '' : 's'}</span>
+          </div>
+          <p class="text-xs text-slate-500">Guests are shown by nickname to keep dinners anonymous until you meet.</p>
+          <div class="space-y-2">${roster}</div>
+          ${unlistedSeats > 0 ? `<p class="text-xs text-slate-500">${unlistedSeats} more seat${unlistedSeats === 1 ? ' was' : 's were'} added with the test controls on the hosting page and ${unlistedSeats === 1 ? 'has' : 'have'} no guest details.</p>` : ''}
+          <div class="bg-darden-lightOrange border border-orange-200 p-3 rounded-lg text-sm">
+            <span class="font-bold">Menu planning:</span>
+            ${diets.length > 0 ? escapeHtml(diets.join(', ')) : 'No dietary restrictions reported.'}
+          </div>
+        </div>
+      `;
+    }
+
+    // ---------- Update ----------
+
+    function editForm(event) {
+      const field = 'w-full text-sm rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darden-orange/50 focus:border-darden-orange transition';
+      const label = 'block text-xs font-semibold uppercase tracking-wider mb-1';
+      return `
+        <form id="editForm" onsubmit="saveUpdate(event)" novalidate class="border-t border-slate-200 pt-4 space-y-3">
+          <h3 class="font-bold text-darden-navy">Update Dinner Details</h3>
+          <div id="editErrors" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700"></div>
+          <div>
+            <label for="editTheme" class="${label}">Discussion Theme / Focus</label>
+            <input id="editTheme" type="text" class="${field}" value="${escapeHtml(event.theme)}" />
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="editDateTime" class="${label}">Date &amp; Time</label>
+              <input id="editDateTime" type="datetime-local" class="${field}" value="${escapeHtml(event.dateTime)}" />
+            </div>
+            <div>
+              <label for="editCapacity" class="${label}">Number of Spots</label>
+              <input id="editCapacity" type="number" min="${Math.max(1, event.filled)}" class="${field}" value="${event.capacity}" />
+            </div>
+          </div>
+          <div>
+            <label for="editLocation" class="${label}">Location / Venue</label>
+            <input id="editLocation" type="text" class="${field}" value="${escapeHtml(event.location)}" />
+          </div>
+          <div class="flex gap-2">
+            <button type="submit" class="px-4 py-2 text-sm font-semibold rounded-lg bg-darden-orange hover:bg-darden-darkOrange text-white transition">Save Changes</button>
+            <button type="button" onclick="toggleEdit(false)" class="px-4 py-2 text-sm font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-darden-navy transition">Discard</button>
+          </div>
+        </form>
+      `;
+    }
+
+    function toggleEdit(editing) {
+      const event = findMyUpcomingEvent(openEventId);
+      if (!event) return showOverview();
+      renderDetail(event, editing);
+      if (editing) document.getElementById('editTheme').focus();
+    }
+
+    function saveUpdate(e) {
+      e.preventDefault();
+      // Re-read storage so sign-ups made in another tab aren't overwritten
+      allEvents = loadEvents();
+      const event = findMyUpcomingEvent(openEventId);
+      if (!event) {
+        showToast('This dinner can no longer be updated.', 'error');
+        return showOverview();
+      }
+
+      const theme = document.getElementById('editTheme').value.trim();
+      const dateTime = document.getElementById('editDateTime').value;
+      const location = document.getElementById('editLocation').value.trim();
+      const capacity = Number(document.getElementById('editCapacity').value);
+
+      const errors = [];
+      if (!theme) errors.push('Discussion theme is required.');
+      if (!dateTime) {
+        errors.push('Please specify a date and time.');
+      } else if (new Date(dateTime) <= new Date()) {
+        errors.push('Date & time must be in the future.');
+      }
+      if (!location) errors.push('Location is required.');
+      if (!Number.isInteger(capacity) || capacity < 1) {
+        errors.push('Capacity must be at least 1 guest.');
+      } else if (capacity < event.filled) {
+        errors.push(`${event.filled} seats are already taken, so capacity can't be lower than ${event.filled}.`);
+      }
+
+      const box = document.getElementById('editErrors');
+      if (errors.length > 0) {
+        box.innerHTML = `<ul class="list-disc list-inside">${errors.map(m => `<li>${escapeHtml(m)}</li>`).join('')}</ul>`;
+        box.classList.remove('hidden');
+        return;
+      }
+
+      Object.assign(event, { theme, dateTime, location, capacity });
+      saveEvents(allEvents);
+      renderDetail(event);
+      showToast('Dinner details updated.', 'success');
+    }
+
+    // ---------- Cancel ----------
+
+    function askCancel() {
+      const event = findMyUpcomingEvent(openEventId);
+      if (!event) return showOverview();
+      const count = (event.signups || []).length;
+      document.getElementById('cancelDialogText').textContent = count > 0
+        ? `"${event.theme}" will be removed from the dinner list. ${count} guest${count === 1 ? ' has' : 's have'} signed up. This cannot be undone.`
+        : `"${event.theme}" will be removed from the dinner list. This cannot be undone.`;
+      document.getElementById('cancelDialog').showModal();
+    }
+
+    function confirmCancel() {
+      document.getElementById('cancelDialog').close();
+      allEvents = loadEvents();
+      const event = findMyUpcomingEvent(openEventId);
+      if (!event) return showOverview();
+      // Keep the dinner (and its sign-ups) on record, just marked as cancelled
+      event.cancelled = true;
+      saveEvents(allEvents);
+      showOverview();
+      showToast(`"${event.theme}" has been cancelled.`, 'info');
+    }
+
+    // ---------- Page helpers ----------
+
+    function resetToDefaults() {
+      resetDemoData();
+      allEvents = loadEvents();
+      showOverview();
+      showToast('Dinners reset to the sample data.', 'info');
+    }
+
+    function handleLogOut() {
+      logOut();
+      window.location.href = 'Account.html';
+    }
+
+    // Custom Toast Notification System (Replaces alert())
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto flex items-center justify-between p-3.5 rounded-lg shadow-lg text-sm font-medium border text-white transition-all transform duration-300 translate-y-2 opacity-0 ${
+        type === 'success' ? 'bg-emerald-600 border-emerald-500' :
+        type === 'error' ? 'bg-rose-600 border-rose-500' :
+        'bg-darden-navy border-darden-softNavy'
+      }`;
+      toast.innerHTML = `
+        <span>${escapeHtml(message)}</span>
+        <button onclick="this.parentElement.remove()" class="ml-3 text-white/70 hover:text-white">✕</button>
+      `;
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.remove('translate-y-2', 'opacity-0'));
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Security HTML Escaper
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    window.onload = function() {
+      if (!user) return; // requireLogin() is already redirecting to the account page
+      document.getElementById('currentUserLabel').textContent = `Logged in as ${user.name}`;
+      const linked = new URLSearchParams(window.location.search).get('event');
+      if (linked && findMyUpcomingEvent(linked)) {
+        openEvent(linked);
+      } else {
+        showOverview();
+      }
+    };
+  </script>
+</body>
+</html>

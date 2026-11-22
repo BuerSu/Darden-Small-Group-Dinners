@@ -274,6 +274,7 @@
 
       const matches = allEvents
         .filter(e => new Date(e.dateTime) > now)                  // upcoming only
+        .filter(e => !e.cancelled)                                // hide dinners the host cancelled
         .filter(e => showFull || e.filled < e.capacity)           // open seats unless asked
         .filter(e => !themeText || e.theme.toLowerCase().includes(themeText))
         .filter(e => !location || e.location === location)
