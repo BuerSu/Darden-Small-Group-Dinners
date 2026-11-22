@@ -1,18 +1,16 @@
 # Darden Small Group Dinners — Fresh Install
 
-Companion README for **`00_fresh_install_v2.sql`**.
-
 This database supports verified Darden student accounts, anonymous dinner listings, student and family bookings, dietary preferences, hosting eligibility, attendance check-in, no-show suspensions, and host announcements with queued email delivery.
 
 ## Fresh-install setup
 
 1. Create a **new Supabase project** that does not already contain the dinner application schema.
-2. Open the SQL Editor, paste the complete contents of `00_fresh_install_v2.sql`, and run it once as `postgres`. The script creates the six application tables, indexes, triggers, private helpers, public RPC functions, and access restrictions in one transaction.
+2. Open the SQL Editor, paste the complete contents of `00_fresh_install.sql`, and run it once as `postgres`. The script creates the six application tables, indexes, triggers, private helpers, public RPC functions, and access restrictions in one transaction.
 3. In the Table Editor, choose schema **`dinner_app`** to inspect the application tables. Supabase Auth accounts remain under Authentication / `auth.users`.
 4. Complete the Auth and email configuration described below.
 5. Connect the frontend through the public RPC functions; do not expose the private schema or query its tables directly from the browser.
 
-This fresh-install script is **not rerunnable** and must not be run on top of the original schema or an already upgraded project. For the project where you already ran the original schema, use the incremental migration instead. You do not need to run a usage SQL file as an installation step.
+This fresh-install script is **not rerunnable** and must not be run on top of the original schema or an already upgraded project.
 
 ## Model overview
 
