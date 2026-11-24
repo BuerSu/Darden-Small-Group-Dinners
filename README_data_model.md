@@ -5,7 +5,7 @@ This database supports verified Darden student accounts, anonymous dinner listin
 ## Fresh-install setup
 
 1. Create a **new Supabase project** that does not already contain the dinner application schema.
-2. Open the SQL Editor, paste the complete contents of `00_fresh_install.sql`, and run it once as `postgres`. The script creates the six application tables, indexes, triggers, private helpers, public RPC functions, and access restrictions in one transaction.
+2. Open the SQL Editor, paste the complete contents of `00_schema_control.sql`, and run it once as `postgres`. The script creates the six application tables, indexes, triggers, private helpers, public RPC functions, and access restrictions in one transaction.
 3. In the Table Editor, choose schema **`dinner_app`** to inspect the application tables. Supabase Auth accounts remain under Authentication / `auth.users`.
 4. Complete the Auth and email configuration described below.
 5. Connect the frontend through the public RPC functions; do not expose the private schema or query its tables directly from the browser.
