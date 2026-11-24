@@ -1,307 +1,391 @@
-# Darden Small Group Dinners — Fresh Install
+# Darden Small Group Dinners — Database Setup and Data Model
 
-This database supports verified Darden student accounts, anonymous dinner listings, student and family bookings, dietary preferences, hosting eligibility, attendance check-in, no-show suspensions, and host announcements with queued email delivery.
+This pull request adds the **Supabase PostgreSQL database foundation** for Darden Small Group Dinners: six related tables and a development dataset.
 
-## Fresh-install setup
+**Business logic belongs in the application backend, written in JavaScript or Python.** These SQL scripts create storage, relationships, indexes and data-integrity constraints. They do **not** install application triggers, stored business functions or public RPC endpoints.
 
-1. Create a **new Supabase project** that does not already contain the dinner application schema.
-2. Open the SQL Editor, paste the complete contents of `00_schema_control.sql`, and run it once as `postgres`. The script creates the six application tables, indexes, triggers, private helpers, public RPC functions, and access restrictions in one transaction.
-3. In the Table Editor, choose schema **`dinner_app`** to inspect the application tables. Supabase Auth accounts remain under Authentication / `auth.users`.
-4. Complete the Auth and email configuration described below.
-5. Connect the frontend through the public RPC functions; do not expose the private schema or query its tables directly from the browser.
+## What is included
 
-This fresh-install script is **not rerunnable** and must not be run on top of the original schema or an already upgraded project.
+| File | Purpose | When to run |
+|---|---|---|
+| [`database/00_schema_controller.sql`](database/00_schema_controller.sql) | Creates the `dinner_app` schema, six tables, indexes, constraints and access restrictions | Once, in a new Supabase project without the application schema |
+| [`database/02_seed_controller_schema.sql`](database/02_seed_controller_schema.sql) | Inserts fictional users, profiles, dietary preferences, dinners, registrations, announcements and email-delivery examples | Optionally, after the schema script, in a development/test project |
+| `README_data_model.md` | Setup instructions, table definitions, relationships and backend responsibilities | Reference |
 
-## Model overview
+The numbering is intentional: **there is no required `01` script in this PR**. Run `00`, then optionally `02`.
 
-| Table | What one row represents |
+This PR does not include a frontend, controller/API implementation, authentication setup helper, database-reader role setup, scheduler or email worker. There is no `npm start` step for these database files alone.
+
+## Quick start
+
+### 1. Choose the correct project
+
+Use a **new Supabase project** where `dinner_app` does not already exist. Supabase supplies the managed `auth.users` table referenced by this model.
+
+If your team already shares a configured Supabase project, use its existing tables instead of rerunning the fresh-install script. Changes to an existing database need a reviewed migration; editing this file does not update installed objects.
+
+### 2. Create the application tables
+
+1. Open the project's **SQL Editor**.
+2. Open `database/00_schema_controller.sql` from this repository.
+3. Paste the entire file into the editor and execute it as `postgres` or the project administrator.
+4. Confirm that it finishes successfully.
+5. In the **Table Editor**, select the `dinner_app` schema to view the six application tables.
+
+The script runs in one transaction. It is **not rerunnable**: it uses `CREATE SCHEMA` and `CREATE TABLE` rather than an upgrade migration. Do not run it on top of the previous database implementation.
+
+### 3. Optionally load the development data
+
+1. Open `database/02_seed_controller_schema.sql`.
+2. Run the entire file in the same project's SQL Editor as the administrator.
+3. Inspect the account/scenario list returned at the end.
+4. Run the verification queries below to check the inserted records.
+
+The seed explicitly creates missing profile rows and initializes fixture account states, so it does not depend on profile-creation or status-synchronization triggers.
+
+### 4. Connect the backend separately
+
+Configure your backend's server-side database connection and grant its database login only the access it needs. The schema script deliberately does **not** grant browser clients direct access. Keep database passwords and connection strings out of this repository and frontend code.
+
+The host-status feature, for example, needs backend reads from `dinners`, `registrations` and `profiles`. Its service can calculate the sign-up count, reserved seats, minimum-participation state and dietary summary from those records.
+
+## Architecture and scope
+
+| Database responsibility | Backend/controller/service responsibility |
 |---|---|
-| `profiles` | A student's app profile and current account state |
-| `dietary_preferences` | A student's answered dietary-preference form |
-| `dinners` | One hosted dinner |
-| `registrations` | One student's booking, accompanying family count, and attendance outcome |
-| `dinner_updates` | One host announcement or event-change/cancellation notice |
+| Store records and relationships | Authenticate the caller and check ownership |
+| Enforce primary/foreign keys and uniqueness | Decide whether a user can book or host |
+| Reject structurally invalid values | Calculate hosting allowance and no-show penalties |
+| Provide indexes for queries | Determine whether a dinner has enough student sign-ups |
+| Store registration-specific dietary notes | Copy/confirm those notes when booking |
+| Store announcements and delivery jobs | Create notices, select recipients and send emails |
+| Store status/timestamp fields | Maintain status transitions and update timestamps |
+
+The backend still uses SQL queries and transactions. Moving business decisions into JavaScript/Python does not remove the need to save related changes atomically or lock rows when concurrent requests could overbook a dinner.
+
+## Table overview
+
+All application tables are in the private `dinner_app` schema. Supabase Auth remains responsible for login credentials and its canonical email/confirmation records.
+
+| Table | One row represents |
+|---|---|
+| `profiles` | One student's application profile |
+| `dietary_preferences` | One student's answered dietary form |
+| `dinners` | One dinner owned by one host |
+| `registrations` | One student's booking, including accompanying family seats and attendance outcome |
+| `dinner_updates` | One announcement or event-change/cancellation notice |
 | `email_outbox` | One update to be delivered to one student |
 
-The same student can host and attend. Family members need no individual account. Supabase's built-in `auth.users` table handles credentials, canonical email, and email confirmation; it is not an extra application table created by this script.
+A person can both host and attend dinners. Separate host accounts are unnecessary. Family members are represented by a seat count and notes on a registration; they do not need accounts or a separate guest table.
 
-## Tables and columns
+## Column reference
 
-All application tables live in private schema `dinner_app`. `PK` means primary key; `FK` means foreign key. All IDs are UUIDs. Times are `timestamptz`. Fields are required unless marked optional.
+`PK` = primary key; `FK` = foreign key. All identifiers use `uuid`. Date/time columns use `timestamptz`. Columns are required unless marked nullable. Empty-string defaults are permitted by the SQL where shown; onboarding requirements must be enforced by the backend.
 
-### profiles
+### `profiles`
 
-| Column | Type | Purpose |
+| Column | Type | Constraint/default and meaning |
 |---|---|---|
-| id | uuid PK, FK auth.users.id | Same ID as authentication account |
-| full_name | text | Up to 150 characters; required for onboarding |
-| phone_number | text, optional during onboarding | International form, e.g. +14345550123; required before booking/hosting |
-| graduation_year | smallint, optional | 2000–2200 |
-| section | text, optional | Up to 30 characters |
-| account_status | text | active, suspended, not_verified; UI labels Active, Suspended, Not Verified |
-| suspended_until | timestamptz, optional | Latest suspension expiry and next no-show cycle boundary |
-| created_at | timestamptz | Account/profile creation time |
+| `id` | `uuid` | PK and FK to `auth.users.id`; not independently generated |
+| `full_name` | `text` | Default `''`; maximum 150 characters |
+| `phone_number` | `text`, nullable | If supplied, international format such as `+14345550123` |
+| `graduation_year` | `smallint`, nullable | Between 2000 and 2200 |
+| `section` | `text`, nullable | Maximum 30 characters |
+| `account_status` | `text` | Default `not_verified`; allowed: `active`, `suspended`, `not_verified` |
+| `suspended_until` | `timestamptz`, nullable | Suspension expiry; available for the backend's penalty/reset logic |
+| `created_at` | `timestamptz` | Default `now()` |
 
-Email and email verification remain authoritative in Supabase `auth.users`. `my_account()` joins them into the profile response without storing another independently editable email or verified flag. `account_status` is a physical column required by the caselet. Auth updates and penalty updates synchronize it; `my_account()` and eligibility checks refresh expired suspensions. A periodic backend sweep can also refresh all statuses. If suspension expires but the email is still unverified, status becomes `not_verified`, so verification cannot be bypassed.
+Email and email verification are read from `auth.users`; the model does not maintain a second editable email copy.
 
-Signup metadata seeds name, phone and dietary preferences. Later profile/diet edits use dedicated RPCs; changing Auth metadata later does not overwrite these canonical application records. A stub account can exist before completing onboarding, but cannot book or host until name, phone and dietary form are complete. Phone is a contact field, not a separate phone-login identity.
+**There is no Auth-to-profile trigger.** Your backend must create/reconcile a profile for each Auth user who uses the application. Creating an Auth user alone does not automatically create this profile. The seed handles its own fixture profiles explicitly.
 
-### dietary_preferences
+`account_status` is stored data, not an automatically calculated field. Confirming an email or reaching `suspended_until` does not update it by itself. The backend must apply the effective state and maintain the stored value when needed. Deleting an Auth user while a related profile exists is restricted by the foreign key.
 
-| Column | Type | Purpose |
+### `dietary_preferences`
+
+| Column | Type | Constraint/default and meaning |
 |---|---|---|
-| profile_id | uuid PK, FK profiles.id | Zero or one answered dietary form per student |
-| is_vegan | boolean | Default false |
-| is_vegetarian | boolean | Default false |
-| is_pescatarian | boolean | Default false |
-| has_nut_allergy | boolean | Default false |
-| has_dairy_allergy | boolean | Default false |
-| has_gluten_restriction | boolean | Default false |
-| other_notes | text | Max 2,000 characters; default empty |
-| updated_at | timestamptz | Last form save |
+| `profile_id` | `uuid` | PK and FK to `profiles.id`; at most one form per student |
+| `is_vegan` | `boolean` | Default `false` |
+| `is_vegetarian` | `boolean` | Default `false` |
+| `is_pescatarian` | `boolean` | Default `false` |
+| `has_nut_allergy` | `boolean` | Default `false` |
+| `has_dairy_allergy` | `boolean` | Default `false` |
+| `has_gluten_restriction` | `boolean` | Default `false` |
+| `other_notes` | `text` | Default `''`; maximum 2,000 characters |
+| `updated_at` | `timestamptz` | Default `now()` on insertion |
 
-Missing row means unanswered. An all-false row means explicitly none of the listed needs. Flags are independent; detailed preparation/cross-contact instructions belong in notes. Saving this form replaces all fields, rather than patching only supplied flags. Dietary choices never block a student from joining a particular dinner.
+Convention: no row means the form is unanswered; an all-false row means none of the listed needs were selected. Flags can overlap. This small, fixed list keeps the model simple; a new flag requires a schema migration.
 
-### dinners
+Deleting a profile cascades to its dietary-preference row. Other historical references can still prevent the profile itself from being deleted.
 
-| Column | Type | Purpose |
+### `dinners`
+
+| Column | Type | Constraint/default and meaning |
 |---|---|---|
-| id | uuid PK | Dinner identifier |
-| host_id | uuid FK profiles.id | Exactly one owning host; hidden from browse/guest responses |
-| title | text | Topic title, 1–200 characters |
-| topic_category | text | One of seven fixed categories below |
-| description | text | Topic description, up to 5,000 characters |
-| address | text | Exact event location, 1–1,000 characters |
-| arrival_instructions | text | Up to 2,000 characters; host/registered-participant access |
-| starts_at | timestamptz | Start; future at creation |
-| ends_at | timestamptz | End; after start |
-| signup_deadline | timestamptz | Future at creation; no later than start |
-| guest_capacity | integer | At least 3; available seats excluding host, including family |
-| status | text | open, cancelled, completed |
-| created_at | timestamptz | Creation time |
-| updated_at | timestamptz | Latest edit/cancellation/completion |
+| `id` | `uuid` | PK; default `gen_random_uuid()` |
+| `host_id` | `uuid` | FK to `profiles.id` |
+| `title` | `text` | Nonblank; 1–200 characters |
+| `topic_category` | `text` | Default `Other`; one of the categories below |
+| `description` | `text` | Default `''`; maximum 5,000 characters |
+| `address` | `text` | Nonblank; 1–1,000 characters |
+| `arrival_instructions` | `text` | Default `''`; maximum 2,000 characters |
+| `starts_at` | `timestamptz` | Dinner start |
+| `ends_at` | `timestamptz` | Must be after `starts_at` |
+| `signup_deadline` | `timestamptz` | Must be no later than `starts_at` |
+| `guest_capacity` | `integer` | Must be greater than zero |
+| `status` | `text` | Default `open`; allowed: `open`, `cancelled`, `completed` |
+| `created_at` | `timestamptz` | Default `now()` |
+| `updated_at` | `timestamptz` | Default `now()` on insertion |
 
-Categories: Career & Professional Life; Darden & MBA Life; Ideas, Books & Current Events; Culture & Global Perspectives; Interests; Life & Connection; Other.
+Allowed categories:
 
-Date and time are formatted from `starts_at`, rather than stored twice. Seats remaining and student-signup count are calculated. Minimum participation is interpreted as **three student registrations**, excluding host/family, retaining the original caselet's sign-up basis. `participation_met` is derived, not a stored confirmed flag. Capacity excludes the host. If you intend family members to satisfy the minimum, that is a separate policy change.
+- Career & Professional Life
+- Darden & MBA Life
+- Ideas, Books & Current Events
+- Culture & Global Perspectives
+- Interests
+- Life & Connection
+- Other
 
-A trusted periodic task cancels underfilled dinners after signup deadline, including those missed by a late task run. Hosts cannot check in an underfilled dinner to earn credits. Only host check-in completes a dinner in this API.
+Capacity means guest seats: students plus family members, excluding the host. The backend enforces the product's three-student minimum and appropriate capacity at event creation. SQL only requires positive capacity; it also permits past dates so historical data can be stored.
 
-### registrations
+Host anonymity and address visibility are API-response/authorization responsibilities. Storing a host ID and address does not itself hide them from a database role allowed to read them.
 
-| Column | Type | Purpose |
+### `registrations`
+
+| Column | Type | Constraint/default and meaning |
 |---|---|---|
-| id | uuid PK | Registration identifier |
-| dinner_id | uuid FK dinners.id | Dinner booked |
-| student_id | uuid FK profiles.id | Student booking |
-| status | text | reserved, cancelled, attended, no_show, excused |
-| family_seats | integer | Zero or more extra seats; no redundant bringing_family field |
-| dietary_notes | text | Student's confirmed requirements for this dinner; max 2,000 characters |
-| family_dietary_notes | text | Combined family requirements; max 4,000 characters |
-| created_at | timestamptz | Original booking time |
-| status_changed_at | timestamptz | Last booking/attendance transition |
+| `id` | `uuid` | PK; default `gen_random_uuid()` |
+| `dinner_id` | `uuid` | FK to `dinners.id` |
+| `student_id` | `uuid` | FK to `profiles.id` |
+| `status` | `text` | Default `reserved`; allowed: `reserved`, `cancelled`, `attended`, `no_show`, `excused` |
+| `family_seats` | `integer` | Default `0`; cannot be negative |
+| `dietary_notes` | `text` | Student's dinner-specific notes; default `''`; maximum 2,000 characters |
+| `family_dietary_notes` | `text` | Family requirements; default `''`; maximum 4,000 characters |
+| `created_at` | `timestamptz` | Default `now()` |
+| `status_changed_at` | `timestamptz` | Default `now()` on insertion |
 
-Unique `(dinner_id, student_id)` prevents duplicates. Cancellation then rebooking reuses the row. One lifecycle status avoids conflicting booking and attendance columns. The host check-in UI accepts present/absent, mapping to `attended`/`no_show`. `excused` is reserved for deliberate administrator handling; hosts cannot use it to erase no-shows.
+`UNIQUE(dinner_id, student_id)` allows only one registration row per student per dinner, including cancelled records. Rebooking should update the existing cancelled row rather than insert a duplicate.
 
-The family form is: bringing anyone? No means zero; Yes means require a positive integer. Party size is `1 + family_seats`. Family members have no individual account or attendance outcome. Combined family dietary notes preserve food requirements without an unnecessary person table.
+A booking occupies `1 + family_seats` seats. The family yes/no UI answer can be derived from whether `family_seats > 0`; it is not stored again.
 
-Booking-specific dietary notes are intentional snapshots. NULL student notes copies current profile preferences; explicit empty string means no notes for this booking. Profile edits later cannot silently change an existing dinner's food requirements.
+Dietary notes are intentional booking snapshots. The backend must copy/confirm them at booking time. The database does not copy profile preferences automatically or rewrite old bookings after a profile change.
 
-### dinner_updates
+### `dinner_updates`
 
-| Column | Type | Purpose |
+| Column | Type | Constraint/default and meaning |
 |---|---|---|
-| id | uuid PK | Update identifier |
-| dinner_id | uuid FK dinners.id | Associated dinner |
-| kind | text | comment, details_changed, cancelled |
-| body | text | Message, 1–5,000 characters |
-| created_at | timestamptz | Posted time |
+| `id` | `uuid` | PK; default `gen_random_uuid()` |
+| `dinner_id` | `uuid` | FK to `dinners.id` |
+| `kind` | `text` | `comment`, `details_changed` or `cancelled` |
+| `body` | `text` | Nonblank; 1–5,000 characters |
+| `created_at` | `timestamptz` | Default `now()` |
 
-Only the host posts comments; author identity is inferred from the dinner, not duplicated. Editing details and cancelling emit notices automatically. Messages are visible only to the host and noncancelled registrants. Only students have recipient email addresses; each student receives one email for their family party. This is an announcement feed, not a guest-to-guest discussion system.
+The intended author is the dinner host; the backend must verify ownership before writing a host update. Editing or cancelling a dinner does not automatically create an announcement or email jobs in this schema.
 
-### email_outbox
+### `email_outbox`
 
-| Column | Type | Purpose |
+| Column | Type | Constraint/default and meaning |
 |---|---|---|
-| id | uuid PK | Delivery job and provider idempotency key |
-| update_id | uuid FK dinner_updates.id | The message to send |
-| recipient_id | uuid FK profiles.id | Intended student recipient |
-| sent_at | timestamptz, optional | Successful provider acceptance |
-| available_at | timestamptz | Earliest next attempt |
-| lease_until | timestamptz, optional | Worker reservation expires after five minutes |
-| lease_token | uuid, optional | Rejects stale workers acknowledging a newer claim |
-| attempt_count | integer | Attempts, default zero |
-| last_error | text, optional | Most recent failure summary |
+| `id` | `uuid` | PK; default `gen_random_uuid()`; can be used as a provider idempotency key |
+| `update_id` | `uuid` | FK to `dinner_updates.id` |
+| `recipient_id` | `uuid` | FK to `profiles.id` |
+| `sent_at` | `timestamptz`, nullable | Worker records successful provider acceptance |
+| `available_at` | `timestamptz` | Default `now()`; earliest next attempt |
+| `lease_until` | `timestamptz`, nullable | Worker-claim expiry |
+| `lease_token` | `uuid`, nullable | Token for identifying a worker's claim |
+| `attempt_count` | `integer` | Default `0`; cannot be negative |
+| `last_error` | `text`, nullable | Last delivery failure summary |
 
-Unique `(update_id, recipient_id)` prevents duplicate queue rows. Recipient email and dinner/message data are joined rather than independently maintained copies. The recipient set is snapshotted when the update is posted. Message and job insertion happen in the same database transaction, so a failed update cannot partially queue emails. Successful jobs remain for delivery tracking; there is no extra status enum duplicating sent_at/lease state.
+`UNIQUE(update_id, recipient_id)` prevents duplicate queue records for the same announcement/student. Dinner details and recipient email are joined through related records instead of maintained as separate current copies.
 
-Email delivery requires a worker/provider. SQL queues work; it cannot itself guarantee external email delivery. `04_email_worker.mjs` is an optional server-side Resend example, not deployed or executed against your accounts. Delivery is at least once; provider idempotency reduces duplicate attempts within the provider's retention period. The worker uses current recipient/event details at send time; a details change between retries can change the payload. Adapt delivery snapshots/provider policy if strict replay of an identical email is required. An email is marked sent when accepted by the provider, not when read or delivered to the inbox.
+The table does not claim jobs, increment attempts, expire leases or send emails automatically. A backend worker must implement those operations. Queue uniqueness does not guarantee exactly-once delivery through an external provider.
 
-## Joins
+## Relationships and joins
 
-| Parent | Child | Cardinality | Join |
-|---|---|---|---|
-| auth.users | profiles | 1:1 for app accounts | auth.users.id = profiles.id |
-| profiles | dietary_preferences | 1:0/1 | profiles.id = dietary_preferences.profile_id |
-| profiles | dinners | 1:many hosted | profiles.id = dinners.host_id |
-| profiles | registrations | 1:many booked | profiles.id = registrations.student_id |
-| dinners | registrations | 1:many | dinners.id = registrations.dinner_id |
-| dinners | dinner_updates | 1:many | dinners.id = dinner_updates.dinner_id |
-| dinner_updates | email_outbox | 1:many recipient deliveries | dinner_updates.id = email_outbox.update_id |
-| profiles | email_outbox | 1:many messages received | profiles.id = email_outbox.recipient_id |
+| Parent → child | Relationship | Join |
+|---|---|---|
+| `auth.users` → `profiles` | At most one app profile per Auth user; every profile requires an Auth user | `auth.users.id = profiles.id` |
+| `profiles` → `dietary_preferences` | One to zero-or-one | `profiles.id = dietary_preferences.profile_id` |
+| `profiles` → `dinners` | One to many hosted dinners | `profiles.id = dinners.host_id` |
+| `profiles` → `registrations` | One to many bookings | `profiles.id = registrations.student_id` |
+| `dinners` → `registrations` | One to many bookings | `dinners.id = registrations.dinner_id` |
+| `dinners` → `dinner_updates` | One to many announcements | `dinners.id = dinner_updates.dinner_id` |
+| `dinner_updates` → `email_outbox` | One to many recipient deliveries | `dinner_updates.id = email_outbox.update_id` |
+| `profiles` → `email_outbox` | One to many messages received | `profiles.id = email_outbox.recipient_id` |
 
-No family join is needed to count seats. Profiles and dinners are many-to-many through registrations for attendance, plus the independent host relationship.
+Students and dinners have a many-to-many attendance relationship through `registrations`, plus an independent host relationship. No family-member join is required to count reserved seats.
 
-## Eligibility and attendance behavior
+## Development dataset
 
+After a first seed into an otherwise empty application schema:
+
+| Table | Expected rows |
+|---|---:|
+| `profiles` | 20 |
+| `dietary_preferences` | 19 |
+| `dinners` | 18 |
+| `registrations` | 45 |
+| `dinner_updates` | 3 |
+| `email_outbox` | 8 |
+
+There are also 20 corresponding fixture Auth users. All people, email addresses, phone numbers and addresses are fictional. Dates are relative to seed execution, keeping upcoming examples in the future when loaded.
+
+### Useful scenarios
+
+| Fixture | What it lets the backend test |
+|---|---|
+| Maya Chen | Experienced host; the upcoming Career dinner has three students, two family seats, five reserved seats and one seat left |
+| Ben Thompson | Host of a fully booked upcoming Culture dinner |
+| Priya Shah | Student bringing two family members with separate dietary requirements |
+| Noah Davis | Attended three dinners without hosting; intended hosting-allowance block |
+| Mia Patel | Three recent no-shows; an active suspension is preloaded |
+| Leo Garcia | Unverified email |
+| Zoe Kim | Past hosted dinner with attendance still pending |
+| Owen Wilson | Older no-shows and an expired suspension |
+| Isha Mehta | Missing phone and dietary form |
+| Hana Park | Two recent no-shows, below the suspension threshold |
+| Sam Rivera | Completed hosting history to test additional attendance allowance |
+| Alex Morgan | New active student with three initial attendance credits |
+
+These histories and initial states are **test inputs**, not proof that automatic enforcement exists. The controllers/services must calculate and enforce the resulting behavior.
+
+### Auth fixtures are not login accounts
+
+The SQL inserts minimal `auth.users` rows to satisfy relationships and test database scenarios. It does not create passwords or managed email identities. You cannot assume the sample users can sign in through Supabase Auth.
+
+The seed sets sample confirmation timestamps/statuses directly, including deliberately unverified Leo. This does not send activation emails or prove ownership of a real inbox.
+
+If you need password-login test accounts, create them through Supabase Auth's admin API first, then seed the application records. Existing matching fixture emails must carry `user_metadata.seed_dataset = 'darden_sgd_demo_v2'`; the seed refuses to overwrite a matching non-fixture account. Auth-generated UUIDs are supported because the seed maps existing users by email.
+
+The seed header references an optional `00_create_login_users.mjs` helper from earlier work. **That helper is not included in this PR and is not required for SQL-only setup.**
+
+### Email jobs are paused
+
+All unsent sample email jobs have `available_at` set 100 years in the future. One sent example and a simulated retry error support delivery-state testing without making the fictional recipients immediately eligible for sending.
+
+Keep real email delivery disabled or mocked when testing fictional accounts. New jobs created by an application use the normal `available_at = now()` default unless the backend overrides it.
+
+### Reseeding
+
+The seed is not an idempotent reset: it refuses to run if dinners already exist in its reserved fixture namespace. A failed attempt should be rolled back before continuing.
+
+It references an earlier `04_cleanup_demo_data.sql`, which is **not included in this PR**. For repeatable isolated tests, recreate a disposable test project or use a separately reviewed fixture-cleanup script. Do not drop a populated shared schema just to rerun the sample data.
+
+The seed uses the prefix `sgd.seed.` for fixture emails and reserved `d4de0000-*` UUID namespaces for its generated application records. Do not reuse those namespaces for unrelated records. Existing tagged fixture profiles and confirmation/status values are reset to the documented starting state when setup proceeds.
+
+## Verify the installation
+
+Run the following in the SQL Editor as the administrator. These are ordinary inspection queries, not RPC calls.
+
+### Check all six table counts
+
+```sql
+SELECT 'profiles' AS table_name, count(*) AS row_count FROM dinner_app.profiles
+UNION ALL SELECT 'dietary_preferences', count(*) FROM dinner_app.dietary_preferences
+UNION ALL SELECT 'dinners', count(*) FROM dinner_app.dinners
+UNION ALL SELECT 'registrations', count(*) FROM dinner_app.registrations
+UNION ALL SELECT 'dinner_updates', count(*) FROM dinner_app.dinner_updates
+UNION ALL SELECT 'email_outbox', count(*) FROM dinner_app.email_outbox;
 ```
-remaining allowance = 3 + 3 × completed hosted dinners
+
+The expected counts above apply to a new application schema with only this seed data. Additional real/test records will change them.
+
+### Inspect a host's registrations and dietary notes
+
+```sql
+SELECT
+  d.title,
+  p.full_name,
+  r.status,
+  r.family_seats,
+  1 + r.family_seats AS party_size,
+  r.dietary_notes,
+  r.family_dietary_notes
+FROM dinner_app.registrations r
+JOIN dinner_app.dinners d ON d.id = r.dinner_id
+JOIN dinner_app.profiles p ON p.id = r.student_id
+WHERE d.id = 'd4de0000-2000-4000-8000-000000000001'
+  AND r.status <> 'cancelled'
+ORDER BY p.full_name;
+```
+
+This is Maya's Career dinner: three student rows, two extra family seats and five total seats. A production API must also verify the caller owns the dinner before returning these personal details.
+
+### Confirm the six tables have RLS enabled
+
+```sql
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'dinner_app'
+ORDER BY tablename;
+```
+
+`rowsecurity` should be `true` for every application table.
+
+## Access model
+
+The schema script revokes schema/table privileges from `PUBLIC`, `anon`, `authenticated` and `service_role`, and enables Row Level Security on all six tables. It installs no client policies or backend-reader role.
+
+Consequently:
+
+- A successful SQL Editor query as the administrator does not imply a browser or backend login has access.
+- Do not expose `dinner_app` as a browser Data API schema to work around missing backend access.
+- A direct backend PostgreSQL login needs explicit schema usage, table/column privileges and applicable RLS policies, or an appropriately privileged administrative connection for controlled setup.
+- A Supabase API service-role key is not a PostgreSQL connection string, and it does not restore privileges explicitly revoked by this script.
+- The backend must authorize individual hosts/students before returning or changing records. A shared backend database login is not an individual user identity.
+
+This PR does not include `host_status_reader.sql`. If using the separately supplied Node dashboard, use the reader-role setup supplied with that application or another reviewed backend-access configuration.
+
+## Business rules to implement in the backend
+
+These are the intended application rules; the schema alone does not execute them:
+
+| Rule | Backend responsibility |
+|---|---|
+| Darden-only accounts | Enforce `@darden.virginia.edu` admission through a non-bypassable Auth flow; configure email verification separately |
+| Profile onboarding | Create/reconcile the app profile and require name, phone and dietary answers before the relevant actions |
+| Account status | Combine Auth verification with suspension expiry; maintain the stored status without treating it as permanently authoritative |
+| Hosting allowance | Start with three attendances; each completed hosted dinner unlocks three more; outstanding reservations reserve allowance |
+| No-show suspension | Third no-show within 30 days triggers a 30-day suspension; apply the agreed reset after expiry |
+| Suspension effects | Block new booking and hosting while allowing existing obligations to be managed |
+| Minimum participation | Require three student registrations, excluding family and host |
+| Capacity | Count `1 + family_seats` per included booking and prevent overbooking transactionally |
+| Host check-in | Require complete attendance results after the event before the host books/hosts again |
+| Dietary snapshots | Save requirements for that booking; do not silently change them when profile preferences change |
+| Announcements | Authorize the host and insert the update and recipient jobs together |
+| Delivery processing | Lease jobs safely, send via a provider, handle retries and record results |
+| Timestamp maintenance | Update `updated_at` and `status_changed_at` on relevant changes; `DEFAULT now()` only initializes inserted rows |
+
+A useful allowance calculation is:
+
+```text
+remaining allowance = 3 + (3 × completed hosted dinners)
                         − attended dinners
                         − outstanding reserved bookings
 ```
 
-Family seats and no-shows do not count as attended dinners. Reservations reserve allowance until cancelled or finalized, including after dinner end. Cancelled dinners release commitments without redundant updates to all registration rows.
+Cancelled dinners release their booking commitments. Family seats do not consume the student's attendance allowance. Full capacity and the three-student minimum are separate facts: one student bringing five family members fills a six-seat dinner but does not meet the student minimum.
 
-A new dinner booking requires all of: verified allowed email, completed onboarding, no active suspension, no pending check-in for a past hosted dinner, and positive allowance. Creating a dinner requires the same checks except attendance allowance: hosting is how the student earns it back. Insufficient hosting allowance leaves `account_status=active`.
+Use controller → service → repository responsibilities: the controller handles HTTP/authentication, the service applies product rules, and the repository performs queries/transactions. This PR provides the repository's database foundation, not those application layers.
 
-After an event's end, its host must submit exactly one present/absent result for **every** noncancelled student registration. Partial or duplicate entries fail the whole transaction. Check-in finalizes attendance and dinner completion together, awards one hosted-dinner credit, and assesses any third-no-show penalties. The host can submit the identical result again safely; changed final results require deliberate administrative correction. Suspended hosts can still fulfill check-in obligations and manage existing plans, but cannot create or book new dinners.
+## Troubleshooting
 
-A third no-show triggers suspension only if its **dinner end date falls within the past 30 days**. Attendance assessment time does not make a 31-day-old dinner count as recent. During a running suspension additional assessments do not extend the penalty. On expiry the cycle resets using retained `suspended_until` as a lower date boundary, and the rolling window still applies. Old attendance is never deleted. The period described as "a month" is implemented as 30 days, consistent with the document's Suspend Until workflow and earlier agreed duration.
-
-Cancellation is allowed before start; existing reservations are not automatically cancelled when a student is suspended. A host's uncompleted check-in blocks new bookings/hosting, not access to existing plans or the ability to fulfill that check-in. These operational details retain the earlier MVP assumptions where the updated document is silent.
-
-## Installation and Auth configuration
-
-After running the appropriate SQL script:
-
-1. In Supabase Auth, enable **Confirm email** for email/password signup. This setting is essential: SQL trusts Auth's confirmed-email timestamp and cannot prove mailbox ownership if Auth automatically confirms everyone.
-2. Configure the Site URL and allowed confirmation redirect URLs for your app. Configure the confirmation template/SMTP sender so students can receive activation links.
-3. Keep `dinner_app` out of Data API exposed schemas. The public RPC functions are the client interface; there are no direct table grants or client RLS policies. All six tables have RLS enabled as defense in depth. No service-role key belongs in the browser.
-4. Use the signup metadata example in `03_frontend_examples.js` to collect name, phone and dietary form. Missing onboarding data can be completed after activation, before the user can book or host.
-5. Periodically call `admin_cancel_underfilled_dinners()` and optionally `admin_refresh_account_statuses()` from a trusted backend. Expiry is also checked on account/eligibility access, so a delayed sweep cannot extend a booking suspension.
-6. Configure/run an email worker to claim and acknowledge queued notices. This is separate from Supabase Auth activation email delivery. The optional worker uses Node 20+, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY and EMAIL_FROM (a provider-verified sender). It performs one bounded batch per invocation; schedule it server-side. Nothing sends merely by downloading these files.
-
-The SQL enforces the domain through a trigger on new Auth users and actual email changes, so alternate signup clients cannot bypass frontend validation. Preexisting non-Darden Auth accounts, if any, are retained during installation but marked not_verified and blocked from activities. Signup failures from a database trigger can surface as generic Auth errors; frontend validation provides the clearer domain/phone message.
-
-The application is still anonymous at the **host identity** level: browse responses omit host_id/name/email. Exact addresses are visible to verified students per the updated document, which may naturally reveal a residential host. Arrival instructions remain restricted to registrants and host.
-
-## Public RPC reference
-
-Use `supabase.rpc(functionName, arguments)` from your initialized client. Student calls require the signed-in user's JWT. The SQL Editor does not normally have a student JWT, so `auth.uid()` is null there and student-only examples will fail until called in an authenticated context.
-
-| Function | Purpose | Access |
-|---|---|---|
-| `my_account()` | Profile, email, refreshed status, allowance and eligibility flags | Own account |
-| `save_my_profile(...)` | Name, phone, graduation year and section | Own account |
-| `my_dietary_preferences()` | Read dietary form | Own account |
-| `save_my_dietary_preferences(...)` | Replace dietary form | Own account |
-| `browse_dinners(...)` | Category/date/search filters, paging, counts and public event details | Verified student |
-| `create_dinner(...)` | Create a dinner | Eligible host |
-| `update_dinner(...)` | Edit a future dinner and queue update notices | Owning host |
-| `cancel_dinner(...)` | Cancel a future dinner and queue notices | Owning host |
-| `my_hosted_dinners()` | Hosted history, signup counts and check-in needs | Own account |
-| `book_dinner(...)` | Atomically reserve student and family seats | Eligible student |
-| `cancel_registration(...)` | Cancel before dinner start | Own booking |
-| `my_registrations()` | Booking history and event status | Own account |
-| `dinner_location(...)` | Address; arrival instructions when authorized | Verified student, with additional participant checks |
-| `host_roster(...)` | Student/family seat counts and dietary notes | Owning host |
-| `host_submit_checkin(...)` | Finalize all participants' attendance after event end | Owning host |
-| `post_dinner_update(...)` | Post an announcement and queue participant emails | Owning host |
-| `dinner_updates(...)` | Read event announcements | Host/noncancelled registrant |
-| `admin_cancel_underfilled_dinners()` | Close underfilled dinners after signup deadline | Trusted backend |
-| `admin_refresh_account_statuses()` | Refresh stored statuses for expired suspensions | Trusted backend |
-| `admin_claim_emails(...)` | Lease pending delivery jobs | Trusted backend |
-| `admin_ack_email(...)` | Record delivery acceptance/failure | Trusted backend |
-
-A student's eligibility flags are advisory for the UI. Booking and hosting RPCs independently recheck the rules in the database. Event edits, cancellations and check-in remain available for existing obligations even when the host cannot create a new dinner.
-
-### Frontend examples
-
-```javascript
-// Own profile and eligibility.
-const { data: account, error: accountError } = await supabase.rpc('my_account');
-if (accountError) throw accountError;
-
-// Available dinner listings; dates are timezone-aware ISO strings when supplied.
-const { data: dinners, error: browseError } = await supabase.rpc('browse_dinners', {
-  p_category: 'Darden & MBA Life',
-  p_from: new Date().toISOString(),
-  p_until: null,
-  p_search: null,
-  p_limit: 50,
-  p_offset: 0
-});
-if (browseError) throw browseError;
-
-// One student and two family seats. Null notes snapshots profile defaults.
-const { data: registrationId, error: bookingError } = await supabase.rpc('book_dinner', {
-  p_dinner_id: dinnerId,
-  p_family_seats: 2,
-  p_dietary_notes: null,
-  p_family_dietary_notes: 'Partner is pescatarian; child has a nut allergy.'
-});
-if (bookingError) throw bookingError;
-
-// After the dinner ends, include every noncancelled roster registration once.
-const { error: checkinError } = await supabase.rpc('host_submit_checkin', {
-  p_dinner_id: dinnerId,
-  p_attendance: roster.map(person => ({
-    registration_id: person.registration_id,
-    present: attendanceByRegistration[person.registration_id]
-  }))
-});
-if (checkinError) throw checkinError;
-```
-
-For signup, use `supabase.auth.signUp` with the Darden email, password, confirmation redirect and metadata:
-
-```javascript
-const { data, error } = await supabase.auth.signUp({
-  email: 'student@darden.virginia.edu',
-  password: passwordFromForm,
-  options: {
-    emailRedirectTo: confirmationRedirect,
-    data: {
-      full_name: 'Student Name',
-      phone_number: '+14345550123',
-      dietary_preferences: {
-        is_vegan: false,
-        is_vegetarian: false,
-        is_pescatarian: false,
-        has_nut_allergy: true,
-        has_dairy_allergy: false,
-        has_gluten_restriction: false,
-        other_notes: 'Please avoid cross-contact with nuts.'
-      }
-    }
-  }
-});
-if (error) throw error;
-```
-
-The frontend must collect an explicit dietary answer, including an all-false form when none apply. New signup metadata seeds the app records; subsequent changes use the profile/dietary RPCs.
-
-## Integrity, access and design choices
-
-- Primary and foreign keys enforce the relationships; unique `(dinner_id, student_id)` prevents duplicate bookings.
-- Booking checks and family seats are saved in one transaction, with dinner/student row locks to serialize capacity and allowance changes.
-- Check-in requires all noncancelled registrations, rejects duplicate or foreign registration IDs, and finalizes the dinner and attendance together.
-- All six tables have Row Level Security enabled and no direct client grants. Public functions authorize callers; private helpers use fully qualified names and an empty search path.
-- Email and verification are read from Auth. Seat counts, participation flags, hosting allowance, no-show counts and family yes/no are derived rather than separately stored.
-- The physical account-status column is synchronized with Auth/penalty updates and refreshed when read or checked. Dietary booking snapshots deliberately retain the requirements communicated for that dinner.
-- Phone numbers and dietary forms are not exposed by the browse response. The host sees only the relevant roster information.
-- Account deletion/anonymization requires an administrative process because historical profiles are referenced by bookings and hosted dinners.
-- UVA colors, fonts and other UI styling belong in frontend code, not database tables.
-
-## Validation and scope
-
-The fresh-install path passed **80 local embedded-PostgreSQL checks**. The full supplied test suite also checks the separate upgrade path and verifies that both produce matching column schemas. Four mocked email-worker checks passed; no real emails were sent.
-
-Tests used a minimal mock of Supabase Auth. Real hosted Auth/activation links, SMTP, concurrent load, email-provider integration and your frontend still require integration testing. The SQL creates the database layer; it does not deploy a frontend, scheduler or email service, and it has not been applied to your project by this README.
+| Problem | What to check |
+|---|---|
+| `schema "dinner_app" already exists` | This is a fresh installer, not an update. Use the existing schema or a proper migration. |
+| Seed reports demo dinners already exist | Do not rerun it as a reset. Use isolated setup or reviewed fixture cleanup. |
+| Tables appear missing in Table Editor | Select schema `dinner_app`, not `public`. |
+| Permission denied from the backend/browser | This PR deliberately grants no application access; configure the backend role and RLS permissions. |
+| Sample account cannot log in | SQL fixtures have no password/email identity. Create login-capable test accounts through Auth. |
+| New Auth user has no profile | No provisioning trigger is installed; the backend must create/reconcile the profile. |
+| A suspension expired but stored status is unchanged | Status expiry is a backend responsibility, not an automatic database transition. |
+| No confirmation or announcement email arrives | This PR neither configures Auth mail nor runs an email worker. |
+| RPC examples from an older README fail | This schema intentionally creates no custom RPC endpoints. |
 
 ## References
 
-- https://supabase.com/docs/guides/auth/general-configuration
-- https://supabase.com/docs/reference/javascript/auth-signup
-- https://supabase.com/docs/guides/auth/managing-user-data
-- https://supabase.com/docs/guides/database/functions
+- [Supabase: managing user data](https://supabase.com/docs/guides/auth/managing-user-data)
+- [Supabase: Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- [Supabase: connecting to PostgreSQL](https://supabase.com/docs/guides/database/connecting-to-postgres)
