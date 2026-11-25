@@ -124,12 +124,11 @@
                 <span id="timeLabel" class="block text-xs font-medium mb-1">Time</span>
                 <button type="button" id="timeToggle" aria-labelledby="timeLabel timeToggle" aria-expanded="false" aria-controls="timePanel" class="w-full text-left text-sm rounded-lg border border-slate-300 px-3 py-2 bg-white">Choose a time</button>
                 <div id="timePanel" hidden class="absolute right-0 z-20 mt-1 w-full min-w-64 bg-white border border-slate-300 rounded-lg p-3 shadow-lg">
-                  <p id="timeHelp" class="text-xs text-slate-600 mb-2">Choose the hour and AM/PM, then select minutes to finish.</p>
                   <div class="grid grid-cols-2 gap-2 mb-3">
                     <div><label for="timeHour" class="block text-xs mb-1">Hour</label><select id="timeHour" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6" selected>6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select></div>
                     <div><label for="timePeriod" class="block text-xs mb-1">AM / PM</label><select id="timePeriod" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm"><option>AM</option><option selected>PM</option></select></div>
                   </div>
-                  <fieldset aria-describedby="timeHelp">
+                  <fieldset>
                     <legend class="text-xs font-medium mb-1">Minutes</legend>
                     <div class="grid grid-cols-4 gap-2">
                       <button type="button" data-minute="00" class="rounded-lg border border-slate-300 py-2 text-sm hover:bg-orange-50">00</button>
