@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#232D4B">
+  <meta name="description" content="View your Darden dinner's sign-up status, guest dietary requirements, and post-dinner attendance check-in.">
+  <title>Host Dashboard | Darden Small Group Dinners</title>
+  <style>
+    :root {
+      --navy: #232D4B;
+      --orange: #E57200;
+      --line: #DCE0E8;
+      --soft-line: #EDF0F4;
+      --radius: 16px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; background: #FFFFFF; color: var(--navy); font: 17px/1.5 Calibri, "Segoe UI", Arial, sans-serif; }
+    button, input, textarea { font: inherit; }
+    .event-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:18px; }
+    .secondary { background:white; color:var(--navy); }
+    dialog { width:min(560px, calc(100% - 32px)); max-height:90vh; overflow:auto; border:1px solid var(--line); border-radius:16px; padding:24px; color:var(--navy); }
+    dialog::backdrop { background:rgb(35 45 75 / 55%); }
+    .edit-fields { display:grid; gap:14px; margin-top:18px; }
+    .edit-fields label { display:grid; gap:5px; font-size:15px; font-weight:700; }
+    .edit-fields input, .edit-fields textarea { width:100%; padding:9px; border:1px solid var(--line); border-radius:6px; }
+    #eventDescription { white-space:pre-wrap; }
+    .guest-year { white-space:normal; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .5; }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--orange); outline-offset: 4px; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(30px, 4vw, 42px); font-weight: 700; letter-spacing: -.8px; line-height: 1.15; }
+    h2 { font-size: 23px; font-weight: 700; line-height: 1.25; letter-spacing: -.35px; }
+    h3 { font-size: 17px; }
+    svg { display: block; flex-shrink: 0; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .skip-link { position: absolute; left: 16px; top: -80px; z-index: 2; background: #FFFFFF; padding: 10px 16px; border: 2px solid var(--navy); }
+    .skip-link:focus { top: 10px; }
+    .site-header { border-top: 5px solid var(--orange); border-bottom: 1px solid var(--line); }
+    .header-inner, .page { width: min(1120px, calc(100% - 64px)); margin: 0 auto; }
+    .header-inner { min-height: 100px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-mark { width: 44px; height: 44px; border: 2px solid var(--orange); border-radius: 50%; display: grid; place-items: center; }
+    .brand-mark svg { width: 25px; height: 25px; }
+    .brand-name { display: block; font-size: 21px; font-weight: 700; line-height: 1.1; letter-spacing: -.3px; }
+    .brand-subtitle { display: block; font-size: 14px; margin-top: 4px; }
+    .portal-label { border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-size: 14px; font-weight: 700; white-space: nowrap; }
+    .page { padding: 42px 0 28px; }
+    .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 1.8px; font-weight: 700; }
+    .page-heading { margin-bottom: 30px; }
+    .page-heading .eyebrow { margin-bottom: 10px; }
+    .page-heading > p:last-child { margin-top: 12px; max-width: 670px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 26px; align-items: start; }
+    .main-column { display: grid; gap: 24px; min-width: 0; }
+    .card { border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; background: #FFFFFF; }
+    .event-card { border-top: 4px solid var(--orange); padding-top: 22px; }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; }
+    .event-card .eyebrow { margin-bottom: 9px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--navy); border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .badge.action { border-color: var(--orange); }
+    .badge.complete { border-color: var(--navy); }
+    .badge.complete::before { content: "\2713"; }
+    .meta { display: grid; gap: 11px; margin-top: 24px; font-size: 15px; }
+    .meta-row { display: flex; align-items: flex-start; gap: 11px; }
+    .meta-row svg { margin-top: 2px; width: 18px; height: 18px; }
+    .section-rule { border: 0; border-top: 1px solid var(--soft-line); margin: 24px 0; }
+    .capacity-label { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; margin-bottom: 10px; }
+    progress { display: block; appearance: none; -webkit-appearance: none; border: 0; width: 100%; height: 8px; border-radius: 999px; overflow: hidden; background: var(--soft-line); }
+    progress::-webkit-progress-bar { background: var(--soft-line); }
+    progress::-webkit-progress-value { background: var(--orange); border-radius: 999px; }
+    progress::-moz-progress-bar { background: var(--orange); border-radius: 999px; }
+    .event-notice { border-left: 3px solid var(--orange); padding-left: 13px; margin-top: 20px; font-size: 14px; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .section-title h2 { font-size: 21px; }
+    .section-intro { margin-top: 10px; font-size: 15px; }
+    .table-wrap { overflow-x: auto; margin-top: 22px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 15px; }
+    caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    th { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid var(--line); padding: 0 10px 12px 0; }
+    td { border-bottom: 1px solid var(--soft-line); padding: 15px 10px 15px 0; vertical-align: middle; }
+    th:last-child, td:last-child { padding-right: 0; }
+    tbody tr:last-child td { border-bottom: none; }
+    .guest-name { font-weight: 700; }
+    .guest-year { display: block; font-size: 12px; margin-top: 1px; }
+    .attendance-cell { font-size: 13px; white-space: nowrap; }
+    .dietary-summary { border: 1px solid var(--line); border-left: 3px solid var(--orange); border-radius: 8px; padding: 14px 16px; font-size: 14px; margin-top: 15px; }
+    .dietary-summary strong { display: block; margin-bottom: 3px; }
+    .checkin-heading { display: flex; align-items: center; gap: 10px; }
+    .step-number { width: 28px; height: 28px; border: 1px solid var(--orange); border-radius: 50%; display: inline-grid; place-items: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+    .checkin-waiting { border-top: 1px solid var(--soft-line); padding-top: 18px; margin-top: 20px; font-size: 15px; }
+    .attendance-list { display: grid; gap: 12px; margin-top: 22px; }
+    fieldset { min-width: 0; border: 1px solid var(--line); padding: 9px 14px 13px; border-radius: 10px; margin: 0; }
+    legend { padding: 0 6px; font-size: 15px; font-weight: 700; }
+    .choices { display: flex; flex-wrap: wrap; gap: 12px; }
+    .choice { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 7px; padding: 7px 15px; font-size: 14px; cursor: pointer; min-height: 42px; }
+    .choice:has(input:checked) { border-color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); }
+    input[type=radio] { width: 16px; height: 16px; margin: 0; accent-color: var(--navy); }
+    .form-bottom { margin-top: 21px; }
+    .form-progress { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; }
+    .form-progress progress { width: 110px; height: 5px; }
+    .form-help { font-size: 13px; margin: 10px 0 18px; }
+    .button { display: inline-flex; justify-content: center; align-items: center; gap: 9px; border: 1px solid var(--navy); border-radius: 8px; padding: 11px 20px; min-height: 46px; text-decoration: none; font-weight: 700; font-size: 15px; background: var(--navy); color: #FFFFFF; }
+    .button:hover:not(:disabled) { box-shadow: 0 0 0 2px var(--orange); }
+    .button svg { width: 16px; height: 16px; }
+    .form-message { border-left: 3px solid var(--orange); padding-left: 12px; font-size: 14px; margin-top: 14px; }
+    .complete-panel { border-top: 1px solid var(--line); padding-top: 20px; margin-top: 20px; }
+    .complete-title { font-weight: 700; font-size: 19px; display: flex; align-items: center; gap: 9px; }
+    .complete-panel > p + p { margin-top: 8px; font-size: 15px; }
+    .sidebar { display: grid; gap: 22px; }
+    .sidebar .card { padding: 24px; }
+    .sidebar h2 { font-size: 19px; }
+    .steps { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 18px; }
+    .steps li { display: flex; gap: 11px; align-items: flex-start; font-size: 14px; }
+    .steps .step-number { width: 23px; height: 23px; font-size: 11px; }
+    .steps strong { display: block; font-size: 14px; }
+    .steps span:last-child { font-size: 13px; }
+    .footer { border-top: 1px solid var(--line); margin-top: 38px; padding-top: 19px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12px; }
+    .footer strong { font-weight: 700; }
+    noscript p { border: 1px solid var(--orange); padding: 18px; margin: 0 auto 24px; max-width: 1120px; }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; }
+      .card, .sidebar .card { padding: 20px; }
+      .header-inner, .page { width: calc(100% - 40px); }
+    }
+    @media (max-width: 740px) {
+      .layout { grid-template-columns: minmax(0, 1fr); }
+      .header-inner { min-height: 88px; gap: 12px; }
+      .brand-name { font-size: 18px; }
+      .brand-subtitle { font-size: 12px; }
+      .brand-mark { width: 36px; height: 36px; }
+      .brand { gap: 10px; }
+      .portal-label { font-size: 12px; padding: 6px 10px; }
+      .page { padding-top: 28px; }
+      .page-heading { margin-bottom: 24px; }
+      .page-heading > p:last-child { font-size: 15px; }
+      .sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 520px) {
+      .header-inner, .page { width: calc(100% - 32px); }
+      .brand-mark { display: none; }
+      .brand-name { font-size: 16px; }
+      .card, .sidebar .card { padding: 20px 17px; border-radius: 12px; }
+      .sidebar { grid-template-columns: minmax(0, 1fr); }
+      .section-title h2 { font-size: 19px; }
+      .checkin-heading { align-items: flex-start; }
+      .attendance-cell { white-space: normal; }
+      table { font-size: 14px; }
+      th { font-size: 10px; letter-spacing: .5px; }
+      .button { width: 100%; font-size: 14px; padding: 11px 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+    @media print {
+      .site-header { border-top-width: 2px; }
+      .header-inner, .page { width: 100%; }
+      .layout { display: block; }
+      .main-column { display: block; }
+      .card { break-inside: avoid; margin-bottom: 18px; }
+      .sidebar, .skip-link, .button, .form-help { display: none; }
+      body { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to dashboard</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"></circle><path d="M3 3v6m3-6v6M3 6h3M4.5 9v12M20 3v18m0-18c-3 2-3 8 0 8"></path></svg></span>
+        <div><span class="brand-name">Darden Small Group Dinners</span><span class="brand-subtitle">Good conversation. Meaningful connections.</span></div>
+      </div>
+      <span class="portal-label">Host portal</span>
+    </div>
+  </header>
+
+  <main class="page" id="main">
+    <div class="page-heading">
+      <a href="host-dashboard.html">← My upcoming dinners</a>
+      <p class="eyebrow">Host dashboard</p>
+      <h1>Your dinner, at a glance.</h1>
+      <p>Keep track of your guests, plan for dietary needs, and complete attendance after your dinner.</p>
+    </div>
+    <noscript><p>Please enable JavaScript to view your event and complete attendance check-in.</p></noscript>
+    <div class="layout">
+      <div class="main-column">
+        <section class="card event-card" aria-labelledby="eventTheme">
+          <div class="card-top">
+            <div><p class="eyebrow" id="eventCategory">Your hosted dinner</p><h2 id="eventTheme">Dinner event</h2></div>
+            <span class="badge" id="eventStatus" role="status">Loading</span>
+          </div>
+          <p id="eventDescription" class="section-intro"></p>
+          <div class="event-actions">
+            <button type="button" class="button" id="updateDinner">Update dinner</button>
+            <button type="button" class="button secondary" id="cancelDinner">Cancel dinner</button>
+          </div>
+          <p id="eventActionNotice" class="section-intro" role="status"></p>
+          <div class="meta">
+            <div class="meta-row"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 11h18"></path></svg><span id="eventDate"></span></div>
+            <div class="meta-row"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg><span id="eventLocation"></span></div>
+          </div>
+          <hr class="section-rule">
+          <div class="capacity-label"><span>Guest sign-ups</span><strong id="capacityCounter"></strong></div>
+          <progress id="capacityProgress" max="6" value="0" aria-label="Guest sign-up capacity"></progress>
+          <p class="event-notice" id="eventNotice"></p>
+        </section>
+
+        <section class="card" aria-labelledby="rosterHeading">
+          <div class="section-title"><h2 id="rosterHeading">Guest roster &amp; dietary needs</h2><span class="badge" id="guestCount"></span></div>
+          <p class="section-intro">Guests are shown by anonymous nickname, with dietary needs for each guest and their plus-one.</p>
+          <div class="table-wrap">
+            <table>
+              <caption>Registered guests, dietary requirements, and attendance</caption>
+              <thead><tr><th scope="col">Guest</th><th scope="col">Party &amp; dietary needs</th><th scope="col">Attendance</th></tr></thead>
+              <tbody id="rosterList"></tbody>
+            </table>
+          </div>
+          <div class="dietary-summary"><strong>Plan for these dietary needs</strong><span id="dietarySummary"></span></div>
+        </section>
+
+        <section class="card" id="checkInSection" aria-labelledby="checkInHeading">
+          <div class="section-title">
+            <div class="checkin-heading"><span class="step-number" aria-hidden="true"><svg viewBox="0 0 24 24" style="width:16px;height:16px"><path d="m5 12 4 4L19 6"></path></svg></span><h2 id="checkInHeading">Post-dinner check-in</h2></div>
+            <span class="badge" id="checkInBadge">After dinner</span>
+          </div>
+          <p class="section-intro">Mark each guest as Present, Absent, or Excused Absence.</p>
+          <p class="checkin-waiting" id="checkInWaiting"></p>
+          <form id="checkInForm" hidden>
+            <div class="attendance-list" id="attendanceList"></div>
+            <div class="form-bottom">
+              <div class="form-progress"><strong id="attendanceProgress" aria-live="polite"></strong><progress id="checkInProgress" max="1" value="0" aria-label="Guests with attendance recorded"></progress></div>
+              <p class="form-help" id="submissionHelp">Choose a status for every guest, then submit your attendance record.</p>
+              <button class="button" id="submitCheckIn" type="submit" disabled aria-describedby="submissionHelp">Complete attendance check-in<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"></path></svg></button>
+            </div>
+          </form>
+          <div class="complete-panel" id="checkInComplete" role="status" hidden>
+            <p class="complete-title"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path></svg>Attendance recorded</p>
+            <p id="attendanceSummary"></p>
+            <p>Attendance recorded for this preview only.</p>
+          </div>
+          <p class="form-message" id="checkInMessage" role="alert" hidden></p>
+        </section>
+      </div>
+
+      <aside class="sidebar" aria-label="Hosting guidance">
+        <section class="card" aria-labelledby="hostingGuideHeading">
+          <h2 id="hostingGuideHeading">A little hosting checklist</h2>
+          <ol class="steps">
+            <li><span class="step-number" aria-hidden="true">1</span><div><strong>Know who's coming</strong><span>Review sign-ups and dietary needs.</span></div></li>
+            <li><span class="step-number" aria-hidden="true">2</span><div><strong>Make room for connection</strong><span>Bring everyone into the conversation.</span></div></li>
+            <li><span class="step-number" aria-hidden="true">3</span><div><strong>Close the loop</strong><span>Record attendance after your dinner.</span></div></li>
+          </ol>
+        </section>
+      </aside>
+    </div>
+    <footer class="footer"><strong>Darden Small Group Dinners</strong><span>Connect beyond your usual circle.</span></footer>
+  </main>
+
+  <dialog id="editDialog" aria-labelledby="editHeading">
+    <h2 id="editHeading">Update dinner</h2>
+    <form id="editDinnerForm" class="edit-fields" novalidate>
+      <label>Title <input id="editTitle" required maxlength="120"></label>
+      <label>Description <textarea id="editDescription" rows="4" required></textarea></label>
+      <label>Date and time (Eastern Time) <input id="editStartAt" type="datetime-local" step="900" required></label>
+      <label>Location <input id="editLocation" required></label>
+      <label>Capacity (minimum 3 guests, maximum 10 guests) <input id="editCapacity" type="number" min="3" max="10" step="1" required></label>
+      <p id="editError" role="alert" hidden></p>
+      <div class="event-actions"><button class="button" type="submit">Save changes</button><button class="button secondary" type="button" id="discardUpdate">Discard</button></div>
+    </form>
+  </dialog>
+  <dialog id="cancelDialog" aria-labelledby="cancelHeading">
+    <h2 id="cancelHeading">Cancel this dinner?</h2>
+    <p class="section-intro">This previews the cancelled state. No dinner or sign-up data will be changed. Reload this page to restore the sample.</p>
+    <div class="event-actions"><button class="button secondary" type="button" id="keepDinner">Keep dinner</button><button class="button" type="button" id="confirmCancel">Yes, cancel dinner</button></div>
+    <p id="cancelError" role="alert" hidden></p>
+  </dialog>
+<script>
+(()=>{
+
+const TIME_ZONE='America/New_York';
+const HOST='demo.host@darden.virginia.edu';
+  const defaults = [
+    {id:'100', hostId:HOST, title:'Summer Internship Stories', description:'Share internship experiences and lessons with fellow students.', category:'Career & Professional Life', startAt:'2026-11-02T19:00:00-05:00', endAt:'2026-11-02T21:00:00-05:00', location:'Pavilion IX, West Lawn', capacity:6, participants:[
+      {id:'guest-100-a', nickname:'Sunny Owl', diet:'Vegetarian', plusOne:false},
+      {id:'guest-100-b', nickname:'Curious Bee', diet:'None', plusOne:true, plusOneDiet:'Nut allergy'},
+      {id:'guest-100-c', nickname:'Calm Otter', diet:'Gluten-free', plusOne:false}]},
+    {id:'107', hostId:HOST, title:'Books That Changed How I Lead', description:'Bring a book or idea that changed your approach to leadership. We will share stories and practical takeaways.', category:'Ideas, Books & Current Events', startAt:'2027-01-14T19:00:00-05:00', endAt:'2027-01-14T21:00:00-05:00', location:'Pavilion IX, West Lawn', capacity:6, participants:[
+      {id:'guest-107-a', nickname:'Sunny Owl', diet:'Vegetarian', plusOne:false},
+      {id:'guest-107-b', nickname:'Curious Bee', diet:'Nut allergy', plusOne:true, plusOneDiet:'Gluten-free'},
+      {id:'guest-107-c', nickname:'Calm Otter', diet:'None', plusOne:false}]},
+    {id:'108', hostId:HOST, title:'Life After Darden: Moving Cities', description:'Discuss choosing a new city, building community, and settling into life after the MBA.', category:'Interests, Life & Connection', startAt:'2027-01-28T18:30:00-05:00', endAt:'2027-01-28T20:30:00-05:00', location:'Ivy Road Apartments Common Room', capacity:5, participants:[{id:'guest-108-a', nickname:'Thoughtful Fox', diet:'Gluten-free', plusOne:false}]}
+  ];
+
+const $=id=>document.getElementById(id);
+const sampleEvents=structuredClone(defaults);
+const seatCount=e=>e.participants.reduce((n,g)=>n+1+(g.plusOne?1:0),0);
+function el(tag,text,className){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;}
+function dateText(value){return new Intl.DateTimeFormat('en-US',{timeZone:TIME_ZONE,dateStyle:'medium',timeStyle:'short'}).format(new Date(value))+' ET';}
+function easternInput(value){const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:TIME_ZONE,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(value)).map(p=>[p.type,p.value]));return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;}
+
+const simulator=document.currentScript.dataset.simulator==='true';
+const requested=new URLSearchParams(location.search).get('event') || '107';
+let event=structuredClone(sampleEvents.find(e=>String(e.id)===requested)||sampleEvents[1]);
+const original=structuredClone(event);
+const statusLabels={present:'Present',absent:'Absent',excused:'Excused Absence'};
+let attendance={},submitted=false,cancelled=false,stage='Before dinner',previewDate=null;
+function render(){
+ $('eventTheme').textContent=event.title;$('eventCategory').textContent=event.category;
+ $('eventDescription').textContent=event.description;
+ $('eventDate').textContent=previewDate || dateText(event.startAt);$('eventLocation').textContent=event.location;
+ $('eventStatus').textContent=cancelled?'Cancelled':stage==='Before dinner'?'Upcoming':stage;
+ $('capacityCounter').textContent=`${seatCount(event)} / ${event.capacity} spots filled`;
+ $('capacityProgress').max=event.capacity;$('capacityProgress').value=seatCount(event);
+ $('guestCount').textContent=`${event.participants.length} sign-ups · ${seatCount(event)} seats`;
+ $('eventNotice').textContent=cancelled?'This dinner is cancelled in this preview. Reload to restore the sample.':'Sample dinner for reviewing the page layout and controls.';
+ $('rosterList').replaceChildren();$('attendanceList').replaceChildren();
+ const diets=new Set();
+ event.participants.forEach((g,i)=>{
+  const row=el('tr'),name=el('td'),diet=el('td');
+  name.append(el('span',g.nickname,'guest-name'),el('span',g.plusOne?'With a plus-one':'Coming alone','guest-year'));
+  diet.append(el('div',`Guest: ${g.diet || 'None'}`));
+  if(g.diet&&g.diet!=='None')diets.add(g.diet);
+  if(g.plusOne){diet.append(el('div',`Plus-one: ${g.plusOneDiet||'Not provided'}`,'guest-year'));if(g.plusOneDiet&&g.plusOneDiet!=='None')diets.add(g.plusOneDiet);}
+  row.append(name,diet,el('td',submitted?statusLabels[attendance[g.id]]:'Not submitted','attendance-cell'));$('rosterList').append(row);
+  const group=el('fieldset'),choices=el('div',undefined,'choices');group.append(el('legend',g.nickname));
+  Object.entries(statusLabels).forEach(([value,label])=>{
+   const option=el('label',undefined,'choice'),input=el('input');input.type='radio';input.name=`attendance-${i}`;input.value=value;input.required=true;input.checked=attendance[g.id]===value;
+   input.addEventListener('change',()=>{attendance[g.id]=value;updateProgress();});option.append(input,document.createTextNode(label));choices.append(option);
+  });group.append(choices);$('attendanceList').append(group);
+ });
+ if(!event.participants.length){const row=el('tr'),cell=el('td','No guests have signed up yet.');cell.colSpan=3;row.append(cell);$('rosterList').append(row);}
+ $('dietarySummary').textContent=diets.size?[...diets].join(' · '):'No dietary restrictions reported.';
+ $('checkInWaiting').textContent='Attendance controls are available here for preview. In the final app, check-in will open after dinner.';
+ $('checkInForm').hidden=submitted||cancelled;$('checkInComplete').hidden=!submitted||cancelled;
+ $('checkInBadge').textContent=submitted?'Completed':'UI preview';
+ $('updateDinner').disabled=cancelled;$('cancelDinner').disabled=cancelled;
+ if(submitted){const counts=Object.keys(statusLabels).map(s=>event.participants.filter(g=>attendance[g.id]===s).length);$('attendanceSummary').textContent=`${counts[0]} present · ${counts[1]} absent · ${counts[2]} excused.`;}
+ updateProgress();
+ if(simulator){$('simStage').textContent=cancelled?'Cancelled':stage;$('simGuide').textContent='Use these controls to preview sample rosters and attendance states. Reloading restores the original sample.';}
+}
+function updateProgress(){const marked=Object.keys(attendance).length;$('attendanceProgress').textContent=`${marked} of ${event.participants.length} guests marked`;$('checkInProgress').max=Math.max(1,event.participants.length);$('checkInProgress').value=marked;$('submitCheckIn').disabled=marked!==event.participants.length;}
+$('updateDinner').addEventListener('click',()=>{
+ $('editTitle').value=event.title;$('editDescription').value=event.description;$('editLocation').value=event.location;
+ $('editStartAt').value=easternInput(event.startAt);$('editCapacity').value=event.capacity;$('editError').hidden=true;$('editDialog').showModal();
+});
+$('discardUpdate').addEventListener('click',()=>$('editDialog').close());
+$('editDinnerForm').addEventListener('submit',e=>{
+ e.preventDefault();if(!$('editDinnerForm').reportValidity())return;
+ event.title=$('editTitle').value.trim();event.description=$('editDescription').value.trim();event.location=$('editLocation').value.trim();event.capacity=Number($('editCapacity').value);
+ // Display the chosen wall-clock value as entered; no backend scheduling logic runs.
+ const parts=$('editStartAt').value.split('T');
+ previewDate=parts.join(' · ')+' ET';$('editDialog').close();render();$('eventActionNotice').textContent='Preview updated. Changes reset when you reload this page.';
+});
+$('cancelDinner').addEventListener('click',()=>$('cancelDialog').showModal());
+$('keepDinner').addEventListener('click',()=>$('cancelDialog').close());
+$('confirmCancel').addEventListener('click',()=>{cancelled=true;$('cancelDialog').close();render();});
+$('checkInForm').addEventListener('submit',e=>{e.preventDefault();if(!$('checkInForm').reportValidity())return;submitted=true;render();});
+if(simulator){
+ const pool=[...original.participants,{id:'extra-a',nickname:'Lively Panda',diet:'Vegan',plusOne:false},{id:'extra-b',nickname:'Brave Turtle',diet:'None',plusOne:false},{id:'extra-c',nickname:'Witty Fox',diet:'None',plusOne:false}];
+ function sampleSeats(seats){let used=0;event.participants=[];for(const g of pool){const size=g.plusOne?2:1;if(used+size<=seats){event.participants.push(g);used+=size;}}attendance={};submitted=false;render();}
+ $('simScenario').addEventListener('change',e=>sampleSeats(Number(e.target.value)));
+ $('simAdd').addEventListener('click',()=>sampleSeats(Math.min(6,seatCount(event)+1)));
+ $('simRemove').addEventListener('click',()=>sampleSeats(Math.max(0,seatCount(event)-1)));
+ $('simStart').addEventListener('click',()=>{stage='In progress';render();});
+ $('simFinish').addEventListener('click',()=>{stage='Finished';render();$('checkInSection').scrollIntoView({behavior:'smooth'});});
+ $('simReset').addEventListener('click',()=>{event=structuredClone(original);attendance={};submitted=false;cancelled=false;stage='Before dinner';previewDate=null;$('eventActionNotice').textContent='';$('simScenario').value='4';render();});
+}
+render();
+
+})();
+</script>
+</body>
+</html>
