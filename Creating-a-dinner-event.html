@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-white">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Darden Small Group Dinners - Host Portal</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Calibri-like system font per the product UI style guide -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Calibri', 'Carlito', 'Arial', 'sans-serif'],
+          },
+          colors: {
+            darden: {
+              orange: '#E57200',
+              navy: '#232D4B',
+              lightOrange: '#FFF4E6',
+              darkOrange: '#C45D00',
+              softNavy: '#354366'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Darden product charter, UI Design Style Guide (page 21): white, UVA orange/blue, Calibri-like font. */
+    body { background: #fff; color: #232D4B; }
+    h1,h2,h3,h4,legend { color: inherit; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #E57200; outline-offset: 1px; }
+    .darden-card { background: #fff; border: 1px solid #e2e5ec; border-radius: 14px; }
+    .darden-pill { border: 1px solid #e2e5ec; border-radius: 999px; background: white; }
+    #eventsContainer > div { border-radius: 16px; }
+  </style>
+</head>
+<body class="h-full bg-white text-darden-navy antialiased flex flex-col font-sans">
+
+  <!-- Main Navigation Header -->
+  <header class="bg-darden-navy text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 bg-darden-orange text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-sm">
+          D
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg leading-tight tracking-tight">Darden Small Group Dinners</h1>
+          <p class="text-xs text-slate-300 font-light">Dinner Event Creation</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-3">
+        <span class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-500/20 text-orange-200 border border-orange-500/30">
+          <span class="w-1.5 h-1.5 rounded-full bg-orange-400 mr-1.5 animate-pulse"></span>
+          Host Portal
+        </span>
+        <button onclick="resetToDefaults()" class="text-xs text-slate-300 hover:text-white underline px-2 py-1 transition">
+          Clear Form
+        </button>
+      </div>
+    </div>
+  </header>
+
+
+  <!-- Notification Banner Container -->
+  <div id="toastContainer" class="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full"></div>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+    
+    <div class="max-w-3xl mx-auto mb-6"><p class="text-xs font-bold uppercase tracking-widest text-darden-orange">Host a dinner</p><h2 class="text-3xl font-bold mt-1">Create a Dinner Event</h2><p class="text-sm text-slate-600 mt-2">Bring Darden classmates together around a conversation that matters to you.</p></div>
+
+    <!-- Single-page event creation form -->
+    <div class="max-w-3xl mx-auto">
+      
+      <!-- Event creation form -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="bg-white p-4 border-b border-slate-200 flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <svg class="w-5 h-5 text-darden-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 class="font-bold text-slate-800 text-base">Host a Dinner Event</h2>
+          </div>
+        </div>
+
+        <form id="createDinnerForm" onsubmit="handleFormSubmit(event)" novalidate class="p-5 space-y-4">
+          
+          <!-- Banner Error Box -->
+          <div id="bannerError" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 flex items-start space-x-2">
+            <svg class="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div id="bannerErrorContent"></div>
+          </div>
+
+          <div>
+            <label for="category" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Topic Category <span class="text-red-500">*</span></label>
+            <select id="category" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2 bg-white">
+              <option value="">Select a general topic...</option>
+              <option>Career &amp; Professional Life</option><option>Darden &amp; MBA Life</option>
+              <option>Ideas, Books &amp; Current Events</option><option>Culture &amp; Global Perspectives</option>
+              <option>Interests, Life &amp; Connection</option><option>Others</option>
+            </select>
+            <p id="categoryError" class="hidden text-xs text-red-600 mt-1">Please choose a topic category.</p>
+          </div>
+          <div>
+            <label for="theme" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Specific Dinner Title / Theme <span class="text-red-500">*</span></label>
+            <input id="theme" type="text" maxlength="120" placeholder="e.g. Breaking into Tech Strategy" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" />
+            <p id="themeError" class="hidden text-xs text-red-600 mt-1">Discussion theme is required.</p>
+          </div>
+          <div>
+            <label for="description" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Dinner Description <span class="text-red-500">*</span></label>
+            <textarea id="description" required rows="4" placeholder="Tell guests more about the topic and what you would like to discuss." class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2"></textarea>
+            <p id="descriptionError" class="hidden text-xs text-red-600 mt-1">A dinner description is required.</p>
+          </div>
+          <div>
+            <span class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Date &amp; Time <span class="text-red-500">*</span></span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label for="eventDate" class="block text-xs font-medium mb-1">Date</label>
+                <input type="date" id="eventDate" required class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" />
+              </div>
+              <div id="timePicker" class="relative">
+                <span id="timeLabel" class="block text-xs font-medium mb-1">Time</span>
+                <button type="button" id="timeToggle" aria-labelledby="timeLabel timeToggle" aria-expanded="false" aria-controls="timePanel" class="w-full text-left text-sm rounded-lg border border-slate-300 px-3 py-2 bg-white">Choose a time</button>
+                <div id="timePanel" hidden class="absolute right-0 z-20 mt-1 w-full min-w-64 bg-white border border-slate-300 rounded-lg p-3 shadow-lg">
+                  <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div><label for="timeHour" class="block text-xs mb-1">Hour</label><select id="timeHour" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6" selected>6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select></div>
+                    <div><label for="timePeriod" class="block text-xs mb-1">AM / PM</label><select id="timePeriod" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm"><option>AM</option><option selected>PM</option></select></div>
+                  </div>
+                  <fieldset>
+                    <legend class="text-xs font-medium mb-1">Minutes</legend>
+                    <div class="grid grid-cols-4 gap-2">
+                      <button type="button" data-minute="00" class="rounded-lg border border-slate-300 py-2 text-sm hover:bg-orange-50">00</button>
+                      <button type="button" data-minute="15" class="rounded-lg border border-slate-300 py-2 text-sm hover:bg-orange-50">15</button>
+                      <button type="button" data-minute="30" class="rounded-lg border border-slate-300 py-2 text-sm hover:bg-orange-50">30</button>
+                      <button type="button" data-minute="45" class="rounded-lg border border-slate-300 py-2 text-sm hover:bg-orange-50">45</button>
+                    </div>
+                  </fieldset>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" id="dateTime" />
+            <p class="text-xs text-slate-500 mt-1">Eastern Time (America/New_York: EST in winter, EDT in summer). Only future dates and times are allowed.</p>
+            <p id="dateError" class="hidden text-xs text-red-600 mt-1">Choose a future date and a time ending in 00, 15, 30, or 45 minutes in Eastern Time.</p>
+          </div>
+          <fieldset class="space-y-3 border border-slate-200 rounded-lg p-3">
+            <legend class="text-xs font-semibold text-slate-700 uppercase tracking-wider px-1">Full Event Address <span class="text-red-500">*</span></legend>
+            <p class="text-xs text-slate-500">The public event listing shows only city, state and ZIP. Full addresses must be protected by server-side access controls in production.</p>
+            <div><label for="address1" class="text-xs font-medium">Street address <span class="text-red-500">*</span></label><input id="address1" autocomplete="address-line1" placeholder="Street number and name" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
+            <div><label for="address2" class="text-xs font-medium">Apartment / suite / building <span class="text-red-500">*</span></label><input id="address2" autocomplete="address-line2" placeholder="Unit or room" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
+            <div class="grid grid-cols-2 gap-3">
+              <div><label for="city" class="text-xs font-medium">City <span class="text-red-500">*</span></label><input id="city" autocomplete="address-level2" placeholder="Charlottesville" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
+              <div><label for="state" class="text-xs font-medium">State <span class="text-red-500">*</span></label><input id="state" autocomplete="address-level1" value="VA" maxlength="2" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
+              <div><label for="zip" class="text-xs font-medium">ZIP code <span class="text-red-500">*</span></label><input id="zip" autocomplete="postal-code" inputmode="numeric" placeholder="22903" maxlength="10" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
+              <div><label for="country" class="text-xs font-medium">Country <span class="text-red-500">*</span></label><input id="country" value="USA" readonly class="w-full text-sm rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" /></div>
+            </div>
+            <p id="locationError" class="hidden text-xs text-red-600">All address fields are required: street address, apartment / suite / building, city, two-letter state, and valid ZIP code.</p>
+            <p class="text-xs text-slate-500">Public location: city, state, and ZIP code only. No map service is required.</p>
+          </fieldset>
+          <div>
+            <label for="capacity" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Number of Spots (minimum 3 guests, maximum 10 guests) <span class="text-red-500">*</span></label>
+            <input type="number" id="capacity" min="3" max="10" step="1" placeholder="e.g. 6" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" />
+            <p id="capacityError" class="hidden text-xs text-red-600 mt-1">Capacity must be a whole number between 3 and 10 guests.</p>
+          </div>
+          <!-- Submit Button -->
+          <div class="pt-2">
+            <button 
+              type="submit" 
+              class="w-full bg-darden-orange hover:bg-darden-darkOrange text-white font-semibold py-2.5 px-4 rounded-lg shadow-sm transition duration-150 flex items-center justify-center space-x-2 text-sm"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              <span>Publish Dinner Event</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-500">
+    <p>Darden School of Business — Small Group Dinners</p>
+  </footer>
+
+  <!-- Application Logic -->
+  <script>
+    const TIME_ZONE = 'America/New_York';
+    const STORAGE_KEY = 'darden-small-group-dinners-v1';
+    const $ = id => document.getElementById(id);
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    // Convert an Eastern local wall-clock time to a UTC instant, including DST.
+    function easternParts(date) {
+      const parts = new Intl.DateTimeFormat('en-US', {timeZone: TIME_ZONE, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).formatToParts(date);
+      return Object.fromEntries(parts.filter(p => p.type !== 'literal').map(p => [p.type, Number(p.value)]));
+    }
+    function easternInput(date) {
+      const p = easternParts(date);
+      return `${p.year}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}T${String(p.hour).padStart(2,'0')}:${String(p.minute).padStart(2,'0')}`;
+    }
+    function easternToUTC(input) {
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(input)) return null;
+      const [year,month,day,hour,minute] = input.match(/\d+/g).map(Number);
+      const guess = Date.UTC(year,month-1,day,hour,minute);
+      const matches = [];
+      // Check both DST offsets: reject nonexistent spring-forward times.
+      for (const offset of [4,5]) {
+        const date = new Date(guess + offset*3600000);
+        if (easternInput(date) === input) matches.push(date);
+      }
+      return matches.length ? matches[0] : null;
+    }
+    let selectedTime = '';
+    function syncDateTime() {
+      $('dateTime').value = $('eventDate').value && selectedTime ? `${$('eventDate').value}T${selectedTime}` : '';
+    }
+    function closeTimePicker(restoreFocus = false) {
+      $('timePanel').hidden = true;
+      $('timeToggle').setAttribute('aria-expanded', 'false');
+      if (restoreFocus) $('timeToggle').focus();
+    }
+    $('timeToggle').addEventListener('click', () => {
+      const opening = $('timePanel').hidden;
+      $('timePanel').hidden = !opening;
+      $('timeToggle').setAttribute('aria-expanded', String(opening));
+      if (opening) $('timeHour').focus();
+    });
+    document.querySelectorAll('[data-minute]').forEach(button => button.addEventListener('click', () => {
+      const hour = Number($('timeHour').value);
+      const period = $('timePeriod').value;
+      selectedTime = `${String(hour % 12 + (period === 'PM' ? 12 : 0)).padStart(2, '0')}:${button.dataset.minute}`;
+      $('timeToggle').textContent = `${hour}:${button.dataset.minute} ${period}`;
+      syncDateTime();
+      closeTimePicker(true);
+    }));
+    $('eventDate').addEventListener('change', syncDateTime);
+    document.addEventListener('click', event => {
+      if (!$('timePicker').contains(event.target)) closeTimePicker();
+    });
+    $('timePicker').addEventListener('keydown', event => {
+      if (event.key === 'Escape') { event.preventDefault(); closeTimePicker(true); }
+    });
+    $('timePicker').addEventListener('focusout', event => {
+      if (!$('timePicker').contains(event.relatedTarget)) closeTimePicker();
+    });
+    function refreshDateMin() { $('eventDate').min = easternInput(new Date()).slice(0, 10); }
+    function resetForm() {
+      $('createDinnerForm').reset(); selectedTime = ''; $('dateTime').value = '';
+      $('timeToggle').textContent = 'Choose a time'; closeTimePicker(); clearErrors(); refreshDateMin();
+    }
+    function resetToDefaults() { resetForm(); showToast('Form cleared.','info'); }
+    function clearErrors() {
+      for (const id of ['category','theme','description','eventDate','timeToggle','address1','address2','city','state','zip','capacity']) $(id).classList.remove('border-red-500');
+      for (const id of ['categoryError','themeError','descriptionError','dateError','locationError','capacityError','bannerError']) $(id).classList.add('hidden');
+    }
+    function markError(field, error, message, errors) {
+      $(field).classList.add('border-red-500'); $(error).classList.remove('hidden'); errors.push(message);
+    }
+    function handleFormSubmit(event) {
+      event.preventDefault(); clearErrors();
+      const errors=[];
+      const category=$('category').value, theme=$('theme').value.trim(), description=$('description').value.trim();
+      const dateTime=$('dateTime').value, utc=easternToUTC(dateTime);
+      const address1=$('address1').value.trim(), address2=$('address2').value.trim();
+      const city=$('city').value.trim(), state=$('state').value.trim().toUpperCase(), zip=$('zip').value.trim();
+      const capacity=Number($('capacity').value);
+      if (!category) markError('category','categoryError','Topic category is required.',errors);
+      if (!theme) markError('theme','themeError','Discussion theme is required.',errors);
+      if (!description) markError('description','descriptionError','A dinner description is required.',errors);
+      if (!utc || utc.getTime()<=Date.now() || !/:(00|15|30|45)$/.test(dateTime)) {
+        markError('eventDate','dateError','Choose a future valid Eastern Time date and a time in 15-minute increments.',errors);
+        $('timeToggle').classList.add('border-red-500');
+      }
+      const addressInvalid = [
+        ['address1', !address1], ['address2', !address2], ['city', !city],
+        ['state', !/^[A-Z]{2}$/.test(state)], ['zip', !/^\d{5}(-\d{4})?$/.test(zip)]
+      ];
+      if (addressInvalid.some(([, invalid]) => invalid)) {
+        addressInvalid.forEach(([id, invalid]) => { if (invalid) $(id).classList.add('border-red-500'); });
+        $('locationError').classList.remove('hidden');
+        errors.push('All address fields are required, including apartment / suite / building. State must have two letters and ZIP must be valid.');
+      }
+      if (!$('capacity').value || !Number.isInteger(capacity) || capacity<3 || capacity>10) markError('capacity','capacityError','Capacity must be between 3 and 10 guests.',errors);
+      if (errors.length) {
+        $('bannerErrorContent').textContent = 'Please fix: '+errors.join(' ');
+        $('bannerError').classList.remove('hidden'); showToast('Please fix the highlighted fields.','error'); return;
+      }
+      try {
+        const events = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        if (!Array.isArray(events)) throw new Error('Invalid saved events');
+        events.unshift({id:Date.now(),category,theme,description,dateTime,dateUTC:utc.toISOString(),address1,address2,city,state,zip,country:'USA',capacity,filled:0});
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+      } catch(err) {
+        showToast('Unable to save in this browser. Check that browser storage is available and try again.','error'); return;
+      }
+      resetForm(); showToast('Dinner event created successfully!','success');
+    }
+    refreshDateMin();
+    // Custom Toast Notification System (Replaces alert())
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto flex items-center justify-between p-3.5 rounded-lg shadow-lg text-xs font-medium border text-white transition-all transform duration-300 translate-y-2 opacity-0 ${
+        type === 'success' ? 'bg-emerald-600 border-emerald-500' :
+        type === 'error' ? 'bg-rose-600 border-rose-500' :
+        'bg-slate-800 border-slate-700'
+      }`;
+
+      toast.innerHTML = `
+        <div class="flex items-center space-x-2">
+          <span>${escapeHtml(message)}</span>
+        </div>
+        <button onclick="this.parentElement.remove()" class="ml-3 text-white/70 hover:text-white">✕</button>
+      `;
+
+      container.appendChild(toast);
+
+      // Animate In
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      // Auto dismiss
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+  </script>
+</body>
+</html>
