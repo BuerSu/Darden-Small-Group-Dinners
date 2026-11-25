@@ -64,7 +64,6 @@
     </div>
   </header>
 
-  <nav class="border-b border-slate-200 bg-white"><div class="max-w-3xl mx-auto px-4 py-3 flex gap-5 text-sm"><span class="font-bold text-darden-orange border-b-2 border-darden-orange pb-1">Create a Dinner</span><a href="Checking-event-status_UPDATED.html" class="text-darden-navy hover:text-darden-orange">My Events Dashboard</a></div></nav>
 
   <!-- Notification Banner Container -->
   <div id="toastContainer" class="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full"></div>
@@ -74,10 +73,10 @@
     
     <div class="max-w-3xl mx-auto mb-6"><p class="text-xs font-bold uppercase tracking-widest text-darden-orange">Host a dinner</p><h2 class="text-3xl font-bold mt-1">Create a Dinner Event</h2><p class="text-sm text-slate-600 mt-2">Bring Darden classmates together around a conversation that matters to you.</p></div>
 
-    <!-- 2-Column Responsive Layout -->
+    <!-- Single-page event creation form -->
     <div class="max-w-3xl mx-auto">
       
-      <!-- COLUMN 1: Story 1 - Create Dinner Form -->
+      <!-- Event creation form -->
       <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="bg-white p-4 border-b border-slate-200 flex items-center justify-between">
           <div class="flex items-center space-x-2">
@@ -119,14 +118,14 @@
             <legend class="text-xs font-semibold text-slate-700 uppercase tracking-wider px-1">Full Event Address <span class="text-red-500">*</span></legend>
             <p class="text-xs text-slate-500">The public event listing shows only city, state and ZIP. Full addresses must be protected by server-side access controls in production.</p>
             <div><label for="address1" class="text-xs font-medium">Street address</label><input id="address1" autocomplete="address-line1" placeholder="Street number and name" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
-            <div><label for="address2" class="text-xs font-medium">Apartment / suite / building (optional)</label><input id="address2" autocomplete="address-line2" placeholder="Unit or room" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
+            <div><label for="address2" class="text-xs font-medium">Apartment / suite / building <span class="text-red-500">*</span></label><input id="address2" autocomplete="address-line2" placeholder="Unit or room" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
             <div class="grid grid-cols-2 gap-3">
               <div><label for="city" class="text-xs font-medium">City</label><input id="city" autocomplete="address-level2" placeholder="Charlottesville" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
               <div><label for="state" class="text-xs font-medium">State</label><input id="state" autocomplete="address-level1" value="VA" maxlength="2" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
               <div><label for="zip" class="text-xs font-medium">ZIP code</label><input id="zip" autocomplete="postal-code" inputmode="numeric" placeholder="22903" maxlength="10" class="w-full text-sm rounded-lg border border-slate-300 px-3 py-2" /></div>
               <div><label for="country" class="text-xs font-medium">Country</label><input id="country" value="USA" readonly class="w-full text-sm rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" /></div>
             </div>
-            <p id="locationError" class="hidden text-xs text-red-600">Street, city, two-letter state, and valid ZIP code are required.</p>
+            <p id="locationError" class="hidden text-xs text-red-600">All address fields are required: street address, apartment / suite / building, city, two-letter state, and valid ZIP code.</p>
             <p class="text-xs text-slate-500">Public location: city, state, and ZIP code only. No map service is required.</p>
           </fieldset>
           <div>
@@ -194,7 +193,7 @@
     function refreshDateMin() { $('dateTime').min = easternInput(new Date(Date.now()+60000)); }
     function resetToDefaults() { $('createDinnerForm').reset(); $('posterPreview').classList.add('hidden'); clearErrors(); refreshDateMin(); showToast('Form cleared.','info'); }
     function clearErrors() {
-      for (const id of ['category','theme','dateTime','address1','city','state','zip','capacity','poster']) $(id).classList.remove('border-red-500');
+      for (const id of ['category','theme','dateTime','address1','address2','city','state','zip','capacity','poster']) $(id).classList.remove('border-red-500');
       for (const id of ['categoryError','themeError','dateError','locationError','capacityError','posterError','bannerError']) $(id).classList.add('hidden');
     }
     function markError(field, error, message, errors) {
@@ -211,7 +210,15 @@
       if (!category) markError('category','categoryError','Topic category is required.',errors);
       if (!theme) markError('theme','themeError','Discussion theme is required.',errors);
       if (!utc || utc.getTime()<=Date.now()) markError('dateTime','dateError','Choose a future valid Eastern Time date.',errors);
-      if (!address1 || !city || !/^[A-Z]{2}$/.test(state) || !/^\d{5}(-\d{4})?$/.test(zip)) markError('address1','locationError','Complete street, city, state and ZIP.',errors);
+      const addressInvalid = [
+        ['address1', !address1], ['address2', !address2], ['city', !city],
+        ['state', !/^[A-Z]{2}$/.test(state)], ['zip', !/^\d{5}(-\d{4})?$/.test(zip)]
+      ];
+      if (addressInvalid.some(([, invalid]) => invalid)) {
+        addressInvalid.forEach(([id, invalid]) => { if (invalid) $(id).classList.add('border-red-500'); });
+        $('locationError').classList.remove('hidden');
+        errors.push('All address fields are required, including apartment / suite / building. State must have two letters and ZIP must be valid.');
+      }
       if (!$('capacity').value || !Number.isInteger(capacity) || capacity<3 || capacity>10) markError('capacity','capacityError','Capacity must be between 3 and 10 guests.',errors);
       if (poster && (!['image/png','image/jpeg','image/webp'].includes(poster.type) || poster.size>2*1024*1024)) markError('poster','posterError','Poster must be JPG, PNG or WebP under 2 MB.',errors);
       if (errors.length) {
@@ -227,7 +234,7 @@
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(events)); }
         catch(err) { showToast('Unable to save in this browser. Try a smaller poster.','error'); return; }
         $('createDinnerForm').reset(); $('posterPreview').classList.add('hidden');
-        refreshDateMin(); showToast('Dinner created! Open the dashboard to view it.','success');
+        refreshDateMin(); showToast('Dinner event created successfully!','success');
       }).catch(()=>showToast('Could not read the poster. Please try another image.','error'));
     }
     $('poster').addEventListener('change',()=>{
