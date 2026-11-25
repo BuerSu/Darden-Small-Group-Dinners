@@ -1,0 +1,26 @@
+{
+  "name": "darden-host-signup-status",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Host sign-up dashboard from PR #9, powered by a JavaScript service and Supabase PostgreSQL",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "dev": "node --watch --env-file-if-exists=.env server/index.js",
+    "test": "node --test tests/*.test.js",
+    "test:browser": "node tests/browser.mjs",
+    "demo:reset": "node scripts/reset-demo.js"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.6.0",
+    "@playwright/test": "^1.65.1",
+    "jsdom": "^31.0.1"
+  }
+}

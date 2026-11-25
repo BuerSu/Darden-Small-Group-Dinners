@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Darden Small Group Dinners — Host Event Status</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/dashboard.js"></script>
+  </head>
+  <body>
+    <div class="page">
+      <header class="site-header card">
+        <div>
+          <p class="eyebrow">Darden MBA community</p>
+          <h1>Darden Small Group Dinners</h1>
+          <p class="subtle">Host dashboard &amp; sign-up status</p>
+        </div>
+        <div class="header-actions">
+          <span class="portal-tag">Host portal</span
+          ><button id="logoutButton" class="button secondary" hidden>
+            Sign out
+          </button>
+        </div>
+      </header>
+      <p id="modeNote" class="mode-note" hidden></p>
+      <div id="errorMessage" role="alert" class="alert error" hidden></div>
+      <button id="retryButton" class="button secondary" hidden>
+        Try again
+      </button>
+      <section
+        id="loginSection"
+        class="card login-card"
+        hidden
+        aria-labelledby="loginTitle"
+      >
+        <p class="eyebrow">Welcome back</p>
+        <h2 id="loginTitle">Your hosted dinners, in one place.</h2>
+        <p class="subtle">
+          Sign in with your verified Darden email to see your guests and their
+          dietary requirements.
+        </p>
+        <form id="loginForm">
+          <label for="email">Darden email</label
+          ><input
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="username"
+            required
+            placeholder="you@darden.virginia.edu"
+          />
+          <label for="password">Password</label
+          ><input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+          <button id="loginButton" class="button primary" type="submit">
+            Sign in
+          </button>
+        </form>
+      </section>
+      <section
+        id="selectionSection"
+        class="card selectors"
+        aria-label="Choose hosted dinner"
+        hidden
+      >
+        <div id="hostField" hidden>
+          <label for="hostSelect">Preview as host</label
+          ><select id="hostSelect"></select>
+        </div>
+        <div class="event-field">
+          <label for="eventSelect">Your hosted dinner</label
+          ><select id="eventSelect"></select>
+        </div>
+        <button id="refreshButton" class="button secondary">Refresh</button>
+      </section>
+      <p id="loadingMessage" class="subtle" role="status">
+        Loading your hosted dinners…
+      </p>
+      <section id="emptyState" class="card empty-state" hidden>
+        <h2>No hosted dinners yet</h2>
+        <p class="subtle">
+          Dinners you create will appear here with their sign-up status and
+          guest details.
+        </p>
+      </section>
+      <main id="dashboard" class="dashboard-grid" hidden>
+        <div class="main-column">
+          <section class="card event-card" aria-labelledby="eventTheme">
+            <div class="event-heading">
+              <div>
+                <p id="eventCategory" class="eyebrow">Hosted event</p>
+                <h2 id="eventTheme"></h2>
+              </div>
+              <span id="statusBadge" class="badge" role="status"></span>
+            </div>
+            <p id="eventDate" class="event-meta"></p>
+            <p id="eventAddress" class="event-meta"></p>
+            <p id="eventDescription" class="subtle description"></p>
+            <div class="metric-grid">
+              <div>
+                <strong id="studentCount">0</strong
+                ><span>student sign-ups</span>
+              </div>
+              <div>
+                <strong id="familyCount">0</strong><span>family seats</span>
+              </div>
+              <div>
+                <strong id="seatsLeft">0</strong><span>seats left</span>
+              </div>
+            </div>
+            <div class="capacity-heading">
+              <label for="capacityProgress">Guest seat capacity</label
+              ><strong id="capacityCounterText">0 / 0 reserved</strong>
+            </div>
+            <progress id="capacityProgress" value="0" max="100">0%</progress>
+            <p class="small subtle">
+              Capacity includes students and their family members. The host is
+              excluded.
+            </p>
+            <p id="statusBanner" class="alert"></p>
+            <p id="deadlineText" class="small subtle"></p>
+          </section>
+          <section class="card roster-card" aria-labelledby="rosterTitle">
+            <div class="section-heading">
+              <h2 id="rosterTitle">Guest roster &amp; dietary requirements</h2>
+              <span id="rosterCountTag" class="count-tag"></span>
+            </div>
+            <p class="small subtle">
+              One row per student booking. Family details are listed with that
+              student.
+            </p>
+            <ul id="rosterList" class="roster-list"></ul>
+            <p id="rosterEmpty" class="empty-copy" hidden>
+              No students have signed up yet.
+            </p>
+          </section>
+        </div>
+        <aside class="side-column">
+          <section class="card dietary-card" aria-labelledby="dietTitle">
+            <p class="eyebrow">Prepare for your guests</p>
+            <h2 id="dietTitle">Dietary notes</h2>
+            <p class="small subtle">
+              These are the requirements reported for this dinner. Confirm
+              preparation details with your guests.
+            </p>
+            <div id="dietarySummary"></div>
+          </section>
+          <section
+            id="demoControls"
+            class="card demo-card"
+            hidden
+            aria-labelledby="demoTitle"
+          >
+            <h2 id="demoTitle">Try the sign-up flow</h2>
+            <p class="small subtle">
+              Local demo only. These controls save registrations to the local
+              database; they do not contact students.
+            </p>
+            <label for="familySeats">Family seats for the next sign-up</label>
+            <select id="familySeats">
+              <option value="0">None</option>
+              <option value="1">1 family member</option>
+              <option value="2">2 family members</option>
+              <option value="3">3 family members</option>
+            </select>
+            <div class="button-stack">
+              <button id="addButton" class="button primary">
+                + Add sample sign-up</button
+              ><button id="cancelButton" class="button secondary">
+                Cancel latest sign-up</button
+              ><button id="resetButton" class="button quiet">
+                Clear sign-ups for this dinner
+              </button>
+            </div>
+            <p id="demoUnavailable" class="small subtle" hidden>
+              Choose an open future dinner to try these controls.
+            </p>
+          </section>
+          <p
+            id="lastUpdated"
+            class="small subtle updated"
+            aria-live="polite"
+          ></p>
+        </aside>
+      </main>
+    </div>
+  </body>
+</html>
