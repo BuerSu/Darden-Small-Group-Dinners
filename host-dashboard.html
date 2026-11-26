@@ -154,18 +154,21 @@
       body { font-size: 12px; }
     }
   
-.dinner-link{display:grid;grid-template-columns:2fr 2fr 1fr;gap:16px;padding:20px 0;border-top:1px solid var(--line);text-decoration:none;align-items:center}.dinner-link:hover{color:var(--orange)}@media(max-width:600px){.dinner-link{grid-template-columns:1fr;gap:6px}}
+.past-dinners{margin-top:24px}.dinner-link{display:grid;grid-template-columns:2fr 2fr 1fr;gap:16px;padding:20px 0;border-top:1px solid var(--line);text-decoration:none;align-items:center}.dinner-link:hover{color:var(--orange)}@media(max-width:600px){.dinner-link{grid-template-columns:1fr;gap:6px}}
 </style></head><body>
 <header class="site-header"><div class="header-inner"><div class="brand"><span class="brand-name">Darden Small Group Dinners</span></div><span class="portal-label">Host portal</span></div></header>
-<main class="page"><div class="page-heading"><p class="eyebrow">Host dashboard</p><h1>My upcoming dinners</h1><p>Choose a dinner to review sign-ups and dietary needs.</p></div><section class="card"><h2>Your hosted dinners</h2><div id="eventsList"></div></section><p class="section-intro">UI preview with sample dinners. Changes on a detail page reset when you reload or navigate away.</p><footer class="footer">Darden Small Group Dinners</footer></main>
+<main class="page"><div class="page-heading"><p class="eyebrow">Host dashboard</p><h1>My upcoming dinners</h1><p>Choose a dinner to review sign-ups and dietary needs.</p></div><section class="card" aria-labelledby="upcomingHeading"><h2 id="upcomingHeading">My Upcoming Dinners</h2><div id="eventsList"></div></section><section class="card past-dinners" aria-labelledby="pastHeading"><h2 id="pastHeading">My Past Dinners</h2><p class="section-intro">Dinners you hosted, including completed and cancelled events. Choose a dinner to review its details and attendance.</p><div id="pastEventsList"></div></section><p class="section-intro">UI preview with sample dinners. Changes on a detail page reset when you reload or navigate away.</p><footer class="footer">Darden Small Group Dinners</footer></main>
 <script>(()=>{
 const TIME_ZONE='America/New_York';
 const HOST='demo.host@darden.virginia.edu';
   const defaults = [
-    {id:'100', hostId:HOST, title:'Summer Internship Stories', description:'Share internship experiences and lessons with fellow students.', category:'Career & Professional Life', startAt:'2026-11-02T19:00:00-05:00', endAt:'2026-11-02T21:00:00-05:00', location:'Pavilion IX, West Lawn', capacity:6, participants:[
+    {id:'100', hostId:HOST, status:'completed', attendance:{'guest-100-a':'present','guest-100-b':'absent','guest-100-c':'excused'}, title:'Summer Internship Stories', description:'Share internship experiences and lessons with fellow students.', category:'Career & Professional Life', startAt:'2026-11-02T19:00:00-05:00', endAt:'2026-11-02T21:00:00-05:00', location:'Pavilion IX, West Lawn', capacity:6, participants:[
       {id:'guest-100-a', nickname:'Sunny Owl', diet:'Vegetarian', plusOne:false},
       {id:'guest-100-b', nickname:'Curious Bee', diet:'None', plusOne:true, plusOneDiet:'Nut allergy'},
       {id:'guest-100-c', nickname:'Calm Otter', diet:'Gluten-free', plusOne:false}]},
+    {id:'99', hostId:HOST, status:'cancelled', cancelled:true, title:'Global Flavors and Travel Stories', description:'An evening of travel stories and conversations about food and culture. This dinner was cancelled before it took place.', category:'Culture & Global Perspectives', startAt:'2026-10-18T18:30:00-04:00', endAt:'2026-10-18T20:30:00-04:00', location:'Ivy Road Apartments Common Room', capacity:6, participants:[
+      {id:'guest-99-a',nickname:'Thoughtful Fox',diet:'Vegetarian',plusOne:false},
+      {id:'guest-99-b',nickname:'Curious Bee',diet:'None',plusOne:true,plusOneDiet:'Gluten-free'}]},
     {id:'107', hostId:HOST, title:'Books That Changed How I Lead', description:'Bring a book or idea that changed your approach to leadership. We will share stories and practical takeaways.', category:'Ideas, Books & Current Events', startAt:'2027-01-14T19:00:00-05:00', endAt:'2027-01-14T21:00:00-05:00', location:'Pavilion IX, West Lawn', capacity:6, participants:[
       {id:'guest-107-a', nickname:'Sunny Owl', diet:'Vegetarian', plusOne:false},
       {id:'guest-107-b', nickname:'Curious Bee', diet:'Nut allergy', plusOne:true, plusOneDiet:'Gluten-free'},
@@ -180,6 +183,23 @@ function el(tag,text,className){const n=document.createElement(tag);if(text!==un
 function dateText(value){return new Intl.DateTimeFormat('en-US',{timeZone:TIME_ZONE,dateStyle:'medium',timeStyle:'short'}).format(new Date(value))+' ET';}
 function easternInput(value){const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:TIME_ZONE,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(value)).map(p=>[p.type,p.value]));return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;}
 
-const events=sampleEvents.slice(1);
-for(const event of events){const row=el('a',undefined,'dinner-link');row.href=`dinner-event-details.html?event=${encodeURIComponent(event.id)}`;row.append(el('strong',event.title),el('span',dateText(event.startAt)),el('span',`${seatCount(event)} / ${event.capacity} seats`));$('eventsList').append(row);}
+// Sample-only presentation: completed/cancelled dinners are grouped into history.
+const hosted=sampleEvents.filter(event=>event.hostId===HOST);
+const isPast=event=>event.cancelled||event.status==='cancelled'||event.status==='completed'||Date.parse(event.endAt)<=Date.now();
+const upcoming=hosted.filter(event=>!isPast(event)).sort((a,b)=>Date.parse(a.startAt)-Date.parse(b.startAt));
+const past=hosted.filter(isPast).sort((a,b)=>Date.parse(b.startAt)-Date.parse(a.startAt));
+function renderDinners(events,containerId){
+ const container=$(containerId);
+ if(!events.length){container.append(el('p',containerId==='pastEventsList'?'No past dinners yet.':'No upcoming dinners yet.','section-intro'));return;}
+ for(const event of events){
+  const row=el('a',undefined,'dinner-link');row.href=`dinner-event-details.html?event=${encodeURIComponent(event.id)}`;
+  const title=el('div');title.append(el('strong',event.title),el('span',event.category,'guest-year'));
+  const detail=el('div');detail.append(el('span',dateText(event.startAt)),el('span',event.location,'guest-year'));
+  const status=el('div');
+  if(isPast(event))status.append(el('span',event.cancelled||event.status==='cancelled'?'Cancelled':'Completed','badge'));
+  else status.append(el('span',`${seatCount(event)} / ${event.capacity} seats`));
+  row.append(title,detail,status);container.append(row);
+ }
+}
+renderDinners(upcoming,'eventsList');renderDinners(past,'pastEventsList');
 })();</script></body></html>

@@ -53,6 +53,7 @@
     .page-heading .eyebrow { margin-bottom: 10px; }
     .page-heading > p:last-child { margin-top: 12px; max-width: 670px; }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 26px; align-items: start; }
+    .layout.archive-layout { grid-template-columns: minmax(0, 1fr); }
     .main-column { display: grid; gap: 24px; min-width: 0; }
     .card { border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; background: #FFFFFF; }
     .event-card { border-top: 4px solid var(--orange); padding-top: 22px; }
@@ -176,8 +177,7 @@
 
   <main class="page" id="main">
     <div class="page-heading">
-      <a href="host-dashboard.html">← My upcoming dinners</a>
-      <p class="eyebrow">Host dashboard</p>
+      <a href="host-dashboard.html">← Host dashboard</a>
       <h1>Your dinner, at a glance.</h1>
       <p>Keep track of your guests, plan for dietary needs, and complete attendance after your dinner.</p>
     </div>
@@ -236,7 +236,7 @@
           <div class="complete-panel" id="checkInComplete" role="status" hidden>
             <p class="complete-title"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path></svg>Attendance recorded</p>
             <p id="attendanceSummary"></p>
-            <p>Attendance recorded for this preview only.</p>
+            <p>Sample attendance record for this dinner.</p>
           </div>
           <p class="form-message" id="checkInMessage" role="alert" hidden></p>
         </section>
@@ -280,10 +280,13 @@
 const TIME_ZONE='America/New_York';
 const HOST='demo.host@darden.virginia.edu';
   const defaults = [
-    {id:'100', hostId:HOST, title:'Summer Internship Stories', description:'Share internship experiences and lessons with fellow students.', category:'Career & Professional Life', startAt:'2026-11-02T19:00:00-05:00', endAt:'2026-11-02T21:00:00-05:00', location:'Pavilion IX, West Lawn', capacity:6, participants:[
-      {id:'guest-100-a', nickname:'Sunny Owl', diet:'Vegetarian', plusOne:false},
-      {id:'guest-100-b', nickname:'Curious Bee', diet:'None', plusOne:true, plusOneDiet:'Nut allergy'},
-      {id:'guest-100-c', nickname:'Calm Otter', diet:'Gluten-free', plusOne:false}]},
+    {id:'100', hostId:HOST, status:'completed', attendance:{'guest-100-a':'present','guest-100-b':'absent','guest-100-c':'excused'}, title:'Summer Internship Stories', description:'Share internship experiences and lessons with fellow students.', category:'Career & Professional Life', startAt:'2026-11-02T19:00:00-05:00', endAt:'2026-11-02T21:00:00-05:00', location:'Pavilion IX, West Lawn', capacity:6, participants:[
+      {id:'guest-100-a', name:'Alex Morgan', nickname:'Sunny Owl', diet:'Vegetarian', plusOne:false},
+      {id:'guest-100-b', name:'Priya Shah', nickname:'Curious Bee', diet:'None', plusOne:true, plusOneDiet:'Nut allergy'},
+      {id:'guest-100-c', name:'Jordan Lee', nickname:'Calm Otter', diet:'Gluten-free', plusOne:false}]},
+    {id:'99', hostId:HOST, status:'cancelled', cancelled:true, title:'Global Flavors and Travel Stories', description:'An evening of travel stories and conversations about food and culture. This dinner was cancelled before it took place.', category:'Culture & Global Perspectives', startAt:'2026-10-18T18:30:00-04:00', endAt:'2026-10-18T20:30:00-04:00', location:'Ivy Road Apartments Common Room', capacity:6, participants:[
+      {id:'guest-99-a',nickname:'Thoughtful Fox',diet:'Vegetarian',plusOne:false},
+      {id:'guest-99-b',nickname:'Curious Bee',diet:'None',plusOne:true,plusOneDiet:'Gluten-free'}]},
     {id:'107', hostId:HOST, title:'Books That Changed How I Lead', description:'Bring a book or idea that changed your approach to leadership. We will share stories and practical takeaways.', category:'Ideas, Books & Current Events', startAt:'2027-01-14T19:00:00-05:00', endAt:'2027-01-14T21:00:00-05:00', location:'Pavilion IX, West Lawn', capacity:6, participants:[
       {id:'guest-107-a', nickname:'Sunny Owl', diet:'Vegetarian', plusOne:false},
       {id:'guest-107-b', nickname:'Curious Bee', diet:'Nut allergy', plusOne:true, plusOneDiet:'Gluten-free'},
@@ -303,8 +306,20 @@ const requested=new URLSearchParams(location.search).get('event') || '107';
 let event=structuredClone(sampleEvents.find(e=>String(e.id)===requested)||sampleEvents[1]);
 const original=structuredClone(event);
 const statusLabels={present:'Present',absent:'Absent',excused:'Excused Absence'};
-let attendance={},submitted=false,cancelled=false,stage='Before dinner',previewDate=null;
+let cancelled=Boolean(event.cancelled || event.status==='cancelled');
+const archived=!simulator && (cancelled || event.status==='completed' || Date.parse(event.endAt)<=Date.now());
+let attendance=archived?{...(event.attendance || {})}:{},submitted=archived&&!cancelled&&event.participants.every(g=>Object.hasOwn(statusLabels,attendance[g.id])),stage=archived?'Completed':'Before dinner',previewDate=null;
 function render(){
+ const showRealNames=event.status==='completed'&&!cancelled;
+ const displayName=guest=>showRealNames?(guest.name || guest.nickname):guest.nickname;
+ $('rosterHeading').parentElement.nextElementSibling.textContent=showRealNames
+  ? 'Guests who registered for this completed dinner, with dietary needs and recorded attendance.'
+  : 'Guests are shown by anonymous nickname, with dietary needs for each guest and their plus-one.';
+ // Historical dinner details retain attendance in the roster without planning panels.
+ document.querySelector('.sidebar').hidden=archived;
+ document.querySelector('.dietary-summary').hidden=archived;
+ $('checkInSection').hidden=archived;
+ document.querySelector('.layout').classList.toggle('archive-layout',archived);
  $('eventTheme').textContent=event.title;$('eventCategory').textContent=event.category;
  $('eventDescription').textContent=event.description;
  $('eventDate').textContent=previewDate || dateText(event.startAt);$('eventLocation').textContent=event.location;
@@ -312,17 +327,21 @@ function render(){
  $('capacityCounter').textContent=`${seatCount(event)} / ${event.capacity} spots filled`;
  $('capacityProgress').max=event.capacity;$('capacityProgress').value=seatCount(event);
  $('guestCount').textContent=`${event.participants.length} sign-ups · ${seatCount(event)} seats`;
- $('eventNotice').textContent=cancelled?'This dinner is cancelled in this preview. Reload to restore the sample.':'Sample dinner for reviewing the page layout and controls.';
+ $('eventNotice').textContent=archived
+  ? cancelled?'This dinner was cancelled. The registered guest list is retained for reference; attendance does not apply.':'This dinner has ended. Review its registered guests, dietary needs, and attendance below.'
+  : cancelled?'This dinner is cancelled in this preview. Reload to restore the sample.':'Sample dinner for reviewing the page layout and controls.';
+ $('updateDinner').parentElement.hidden=archived;
+ $('capacityProgress').setAttribute('aria-label',archived?'Registered guest capacity':'Guest sign-up capacity');
  $('rosterList').replaceChildren();$('attendanceList').replaceChildren();
  const diets=new Set();
  event.participants.forEach((g,i)=>{
   const row=el('tr'),name=el('td'),diet=el('td');
-  name.append(el('span',g.nickname,'guest-name'),el('span',g.plusOne?'With a plus-one':'Coming alone','guest-year'));
+  name.append(el('span',displayName(g),'guest-name'),el('span',g.plusOne?'With a plus-one':'Coming alone','guest-year'));
   diet.append(el('div',`Guest: ${g.diet || 'None'}`));
   if(g.diet&&g.diet!=='None')diets.add(g.diet);
   if(g.plusOne){diet.append(el('div',`Plus-one: ${g.plusOneDiet||'Not provided'}`,'guest-year'));if(g.plusOneDiet&&g.plusOneDiet!=='None')diets.add(g.plusOneDiet);}
-  row.append(name,diet,el('td',submitted?statusLabels[attendance[g.id]]:'Not submitted','attendance-cell'));$('rosterList').append(row);
-  const group=el('fieldset'),choices=el('div',undefined,'choices');group.append(el('legend',g.nickname));
+  row.append(name,diet,el('td',cancelled?'Not applicable':archived?(statusLabels[attendance[g.id]] || 'Not recorded'):submitted?statusLabels[attendance[g.id]]:'Not submitted','attendance-cell'));$('rosterList').append(row);
+  const group=el('fieldset'),choices=el('div',undefined,'choices');group.append(el('legend',displayName(g)));
   Object.entries(statusLabels).forEach(([value,label])=>{
    const option=el('label',undefined,'choice'),input=el('input');input.type='radio';input.name=`attendance-${i}`;input.value=value;input.required=true;input.checked=attendance[g.id]===value;
    input.addEventListener('change',()=>{attendance[g.id]=value;updateProgress();});option.append(input,document.createTextNode(label));choices.append(option);
@@ -330,10 +349,17 @@ function render(){
  });
  if(!event.participants.length){const row=el('tr'),cell=el('td','No guests have signed up yet.');cell.colSpan=3;row.append(cell);$('rosterList').append(row);}
  $('dietarySummary').textContent=diets.size?[...diets].join(' · '):'No dietary restrictions reported.';
- $('checkInWaiting').textContent='Attendance controls are available here for preview. In the final app, check-in will open after dinner.';
- $('checkInForm').hidden=submitted||cancelled;$('checkInComplete').hidden=!submitted||cancelled;
- $('checkInBadge').textContent=submitted?'Completed':'UI preview';
- $('updateDinner').disabled=cancelled;$('cancelDinner').disabled=cancelled;
+ $('checkInHeading').textContent=archived?'Attendance record':'Post-dinner check-in';
+ $('checkInHeading').closest('section').querySelector('.section-intro').textContent=archived
+  ? cancelled?'Attendance is not recorded for cancelled dinners.':'Review whether each registered guest was present, absent, or had an excused absence.'
+  :'Mark each guest as Present, Absent, or Excused Absence.';
+ $('checkInWaiting').hidden=archived&&!cancelled&&submitted;
+ $('checkInWaiting').textContent=archived
+  ? cancelled?'This dinner did not take place. No guests are marked absent.':submitted?'':'A complete attendance record is not available. Unrecorded statuses are shown as Not recorded.'
+  :'Attendance controls are available here for preview. In the final app, check-in will open after dinner.';
+ $('checkInForm').hidden=archived||submitted||cancelled;$('checkInComplete').hidden=!submitted||cancelled;
+ $('checkInBadge').textContent=cancelled?'Not applicable':submitted?'Completed':archived?'Not recorded':'UI preview';
+ $('updateDinner').disabled=archived||cancelled;$('cancelDinner').disabled=archived||cancelled;
  if(submitted){const counts=Object.keys(statusLabels).map(s=>event.participants.filter(g=>attendance[g.id]===s).length);$('attendanceSummary').textContent=`${counts[0]} present · ${counts[1]} absent · ${counts[2]} excused.`;}
  updateProgress();
  if(simulator){$('simStage').textContent=cancelled?'Cancelled':stage;$('simGuide').textContent='Use these controls to preview sample rosters and attendance states. Reloading restores the original sample.';}
